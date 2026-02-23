@@ -6,14 +6,12 @@
 
 import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   Upload,
   Settings2,
   Download,
-  Trash2,
   FileText,
   CheckCircle2,
   AlertTriangle,
@@ -22,7 +20,6 @@ import {
   X,
   Edit2,
   ChevronRight,
-  FileArchive,
   Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -135,10 +132,12 @@ export default function Home() {
         );
         setDocuments(prev => prev.map(d => d.id === placeholder.id ? result : d));
       } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error('[DocRenamer] Processing error for', validFiles[i].name, ':', errMsg, err);
         setDocuments(prev => prev.map(d => d.id === placeholder.id ? {
           ...d,
           status: "error",
-          errorMessage: "Processing failed",
+          errorMessage: errMsg || "Processing failed",
         } : d));
       }
     }
@@ -205,8 +204,6 @@ export default function Home() {
   // Redact Australian TFN patterns (9 digits, optionally space-separated)
   async function getFileForDownload(doc: ProcessedDocument): Promise<Blob> {
     if (!config.redactTaxFileNumber) return doc.file;
-    // Only attempt text-based redaction on PDFs and text files
-    // For binary PDFs we do a best-effort byte-level replacement
     const TFN_PATTERN = /\b(\d{3}[\s-]?\d{3}[\s-]?\d{3})\b/g;
     try {
       const text = await doc.file.text();
@@ -215,7 +212,7 @@ export default function Home() {
         return new Blob([redacted], { type: doc.file.type });
       }
     } catch {
-      // Binary file — return as-is (true PDF redaction requires a PDF library)
+      // Binary file — return as-is
     }
     return doc.file;
   }
@@ -225,7 +222,6 @@ export default function Home() {
     if (doneDocs.length === 0) return;
 
     try {
-      // Dynamically import JSZip
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
 
@@ -243,7 +239,7 @@ export default function Home() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success(`Downloaded ${doneDocs.length} documents`);
-    } catch (err) {
+    } catch {
       // Fallback: download individually
       for (const doc of doneDocs) {
         const name = doc.customName || doc.proposedName;
@@ -472,7 +468,7 @@ function DocumentRow({
         </div>
         <div className="flex items-center gap-2">
           <Loader2 className="h-3.5 w-3.5 animate-spin text-primary flex-shrink-0" />
-          <span className="text-xs text-muted-foreground">Processing...</span>
+          <span className="text-xs text-muted-foreground">Analysing with AI...</span>
         </div>
         <div />
         <div />

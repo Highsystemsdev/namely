@@ -1,10 +1,12 @@
-/*
+/**
  * Doc Renamer — AI Document Processor
- * Simulates AI-powered document classification, data extraction, and filename generation.
- * In production this would call an AI API (e.g., GPT-4 Vision) to analyze document content.
+ * Real AI-powered document classification and data extraction via Forge API (GPT-4o).
+ * Uses PDF.js for text extraction and Vision API for scanned/image documents.
  */
 
 import { DOCUMENT_TYPES, LENDERS, type DocumentTypeConfig } from "./documentTypes";
+import { extractDocumentContent } from "./documentExtractor";
+import { extractWithForge } from "./forgeExtractor";
 
 export interface ExtractedData {
   [key: string]: string;
@@ -316,27 +318,38 @@ export async function processDocument(
   dateOrder: string,
   dateSeparator: string
 ): Promise<ProcessedDocument> {
-  // Simulate AI processing delay (0.5-2 seconds per file)
-  await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1500));
-
-  const { typeId, confidence } = guessDocumentType(file.name);
-  const docType = DOCUMENT_TYPES.find(d => d.id === typeId) || DOCUMENT_TYPES[0];
-  const extractedData = generateExtractedData(docType);
-
-  const template = templates[typeId] || docType.defaultTemplate;
-  const proposedName = applyTemplate(template, extractedData, separator, nameFormat, dateOrder, dateSeparator);
-
+  const id = Math.random().toString(36).slice(2);
   const ext = file.name.includes(".") ? "." + file.name.split(".").pop()!.toLowerCase() : ".pdf";
 
+  // Step 1: Extract text or render image from the document
+  const extraction = await extractDocumentContent(file);
+
+  // Step 2: Call Forge API to classify and extract fields
+  const forgeResult = await extractWithForge(extraction, file.name);
+
+  // Step 3: Find the matching document type config
+  const docType = DOCUMENT_TYPES.find(d => d.id === forgeResult.documentTypeId) || DOCUMENT_TYPES[0];
+
+  // Step 4: Apply naming template
+  const template = templates[forgeResult.documentTypeId] || docType.defaultTemplate;
+  const proposedName = applyTemplate(
+    template,
+    forgeResult.extractedData,
+    separator,
+    nameFormat,
+    dateOrder,
+    dateSeparator
+  );
+
   return {
-    id: Math.random().toString(36).slice(2),
+    id,
     originalName: file.name,
     fileSize: file.size,
     fileType: file.type || "application/octet-stream",
-    documentTypeId: typeId,
-    documentTypeLabel: docType.label,
-    confidence,
-    extractedData,
+    documentTypeId: forgeResult.documentTypeId,
+    documentTypeLabel: forgeResult.documentTypeLabel,
+    confidence: forgeResult.confidence,
+    extractedData: forgeResult.extractedData,
     proposedName: proposedName + ext,
     customName: null,
     status: "done",

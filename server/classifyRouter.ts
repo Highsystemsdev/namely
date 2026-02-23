@@ -1,0 +1,228 @@
+/**
+ * Doc Renamer — Document Classification Router
+ * Receives extracted text or a base64 image from the frontend,
+ * calls the Forge LLM (server-side, secure), and returns structured
+ * document classification + field extraction results.
+ */
+
+import { z } from "zod";
+import { publicProcedure, router } from "./_core/trpc";
+import { invokeLLM } from "./_core/llm";
+
+// The 62 document types the model must choose from
+const DOCUMENT_TYPE_LIST = [
+  "ATO Tax Account", "Birth Certificate", "BNPL Statement", "Business Activity Statement",
+  "Centrelink Statement", "Certificate of Currency", "Child Support Letter",
+  "Citizenship Certificate", "Company Tax Return", "Conditional Approval Letter",
+  "Contract of Sale", "Credit Card Statement", "Credit Guide",
+  "Credit Guide and Privacy Statement", "Credit Proposal Disclosure", "Credit Report",
+  "Deposit Receipt", "Driver's License", "Electricity Bill", "Employment Contract",
+  "Fact Find", "Financial Passport", "Financial Statements", "First Home Buyer Declaration",
+  "Formal Approval Letter", "Gift Letter", "HECS/HELP Statement", "Home Loan Statement",
+  "Income Statement", "Individual Tax Return", "Line of Credit Statement",
+  "Marriage Certificate", "Medicare Card", "Notice of Assessment",
+  "Open Banking Account Summary", "Open Banking Credit Card", "Open Banking Home Loan",
+  "Open Banking Line of Credit", "Open Banking Personal Loan", "Open Banking Savings",
+  "Partnership Tax Return", "Passport", "Payslip", "Personal Loan Statement",
+  "Pricing Approval", "Privacy Statement", "Property Valuation", "Quickli Servicing",
+  "Rates Notice", "Rental Appraisal", "Rental Statement", "Salary Packaging",
+  "Savings Statement", "Serviceability Calc", "Settlement Letter",
+  "Superannuation Statement", "Tenancy Agreement", "Transaction Listing", "Trust Deed",
+  "Trust Tax Return", "Visa/Immigration", "Water Bill", "Unknown",
+];
+
+// Map from document type label to the template ID used in the app
+const LABEL_TO_ID: Record<string, string> = {
+  "ATO Tax Account": "ato-tax-account",
+  "Birth Certificate": "birth-certificate",
+  "BNPL Statement": "bnpl-statement",
+  "Business Activity Statement": "business-activity-statement",
+  "Centrelink Statement": "centrelink-statement",
+  "Certificate of Currency": "certificate-of-currency",
+  "Child Support Letter": "child-support-letter",
+  "Citizenship Certificate": "citizenship-certificate",
+  "Company Tax Return": "company-tax-return",
+  "Conditional Approval Letter": "conditional-approval-letter",
+  "Contract of Sale": "contract-of-sale",
+  "Credit Card Statement": "credit-card-statement",
+  "Credit Guide": "credit-guide",
+  "Credit Guide and Privacy Statement": "credit-guide-privacy",
+  "Credit Proposal Disclosure": "credit-proposal-disclosure",
+  "Credit Report": "credit-report",
+  "Deposit Receipt": "deposit-receipt",
+  "Driver's License": "drivers-license",
+  "Electricity Bill": "electricity-bill",
+  "Employment Contract": "employment-contract",
+  "Fact Find": "fact-find",
+  "Financial Passport": "financial-passport",
+  "Financial Statements": "financial-statements",
+  "First Home Buyer Declaration": "first-home-buyer-declaration",
+  "Formal Approval Letter": "formal-approval-letter",
+  "Gift Letter": "gift-letter",
+  "HECS/HELP Statement": "hecs-help-statement",
+  "Home Loan Statement": "home-loan-statement",
+  "Income Statement": "income-statement",
+  "Individual Tax Return": "individual-tax-return",
+  "Line of Credit Statement": "line-of-credit-statement",
+  "Marriage Certificate": "marriage-certificate",
+  "Medicare Card": "medicare-card",
+  "Notice of Assessment": "notice-of-assessment",
+  "Open Banking Account Summary": "open-banking-account-summary",
+  "Open Banking Credit Card": "open-banking-credit-card",
+  "Open Banking Home Loan": "open-banking-home-loan",
+  "Open Banking Line of Credit": "open-banking-line-of-credit",
+  "Open Banking Personal Loan": "open-banking-personal-loan",
+  "Open Banking Savings": "open-banking-savings",
+  "Partnership Tax Return": "partnership-tax-return",
+  "Passport": "passport",
+  "Payslip": "payslip",
+  "Personal Loan Statement": "personal-loan-statement",
+  "Pricing Approval": "pricing-approval",
+  "Privacy Statement": "privacy-statement",
+  "Property Valuation": "property-valuation",
+  "Quickli Servicing": "quickli-servicing",
+  "Rates Notice": "rates-notice",
+  "Rental Appraisal": "rental-appraisal",
+  "Rental Statement": "rental-statement",
+  "Salary Packaging": "salary-packaging",
+  "Savings Statement": "savings-statement",
+  "Serviceability Calc": "serviceability-calc",
+  "Settlement Letter": "settlement-letter",
+  "Superannuation Statement": "superannuation-statement",
+  "Tenancy Agreement": "tenancy-agreement",
+  "Transaction Listing": "transaction-listing",
+  "Trust Deed": "trust-deed",
+  "Trust Tax Return": "trust-tax-return",
+  "Visa/Immigration": "visa-immigration",
+  "Water Bill": "water-bill",
+};
+
+function buildSystemPrompt(): string {
+  return `You are an expert document classifier and data extractor for an Australian mortgage broking context.
+Your task is to:
+1. Identify the document type from the provided list
+2. Extract all relevant fields from the document
+3. Return a strict JSON response
+
+DOCUMENT TYPES (choose exactly one):
+${DOCUMENT_TYPE_LIST.join(", ")}
+
+FIELD EXTRACTION RULES:
+- name: Full name of the primary person (e.g. "John Michael Smith"). For companies, use the company name.
+- date: Primary document date in DD-MM-YYYY format (e.g. "30-06-2023")
+- expiryDate: Expiry date in DD-MM-YYYY format
+- payPeriod: Pay period end date in DD-MM-YYYY format
+- statementDate: Statement date in DD-MM-YYYY format
+- financialYear: Financial year as "YYYY-YY" (e.g. "2022-23")
+- month: Statement month as "Month YYYY" (e.g. "June 2023")
+- lender: Financial institution name (full name, e.g. "National Australia Bank")
+- employer: Employer name
+- company: Company or business name
+- abn: ABN as 11 digits without spaces (e.g. "12345678901")
+- accountNumber: Account number
+- balance: Dollar amount with $ sign (e.g. "$45,230.00")
+- totalBalance: Total balance with $ sign
+- creditLimit: Credit limit with $ sign
+- grossPay: Gross pay with $ sign
+- totalIncome: Total income with $ sign
+- taxableIncome: Taxable income with $ sign
+- loanAmount: Loan amount with $ sign
+- purchasePrice: Purchase price with $ sign
+- valuationAmount: Valuation amount with $ sign
+- weeklyRent: Weekly rent with $ sign
+- weeklyAmount: Weekly amount with $ sign
+- propertyAddress: Full property address
+- documentNumber: Document/reference/licence number
+- period: Period description (e.g. "Q4 2022-23")
+- gstOwed: GST amount with $ sign
+- paymentType: Type of Centrelink payment (e.g. "JobSeeker")
+- incomeTaxBalance: Income tax balance with $ sign
+- activityStatementBalance: Activity statement balance with $ sign
+
+RESPONSE FORMAT (strict JSON, no markdown, no explanation):
+{
+  "documentType": "<exact type from list>",
+  "confidence": <0-100 integer>,
+  "fields": {
+    "<fieldName>": "<value>",
+    ...
+  }
+}
+
+Only include fields that are clearly present in the document. Do not guess or fabricate values.
+If you cannot determine the document type, use "Unknown" with confidence 0.`;
+}
+
+export const classifyRouter = router({
+  classify: publicProcedure
+    .input(
+      z.object({
+        /** Extracted text from the document (for digital PDFs) */
+        text: z.string().optional(),
+        /** Base64-encoded JPEG image of page 1 (for scanned PDFs / images) */
+        imageBase64: z.string().optional(),
+        /** Whether this is image mode */
+        isImageMode: z.boolean(),
+        /** Original filename for context */
+        filename: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { text, imageBase64, isImageMode, filename } = input;
+
+      // Build user message content
+      const userContent: Array<{ type: string; text?: string; image_url?: { url: string; detail: string } }> = [];
+
+      if (isImageMode && imageBase64) {
+        userContent.push({
+          type: "image_url",
+          image_url: {
+            url: `data:image/jpeg;base64,${imageBase64}`,
+            detail: "high",
+          },
+        });
+        userContent.push({
+          type: "text",
+          text: `Classify and extract data from this document. Original filename: "${filename}"`,
+        });
+      } else {
+        userContent.push({
+          type: "text",
+          text: `Classify and extract data from this document text.\n\nOriginal filename: "${filename}"\n\nDOCUMENT TEXT:\n${(text || "").slice(0, 8000)}`,
+        });
+      }
+
+      const result = await invokeLLM({
+        messages: [
+          { role: "system", content: buildSystemPrompt() },
+          { role: "user", content: userContent as any },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 1000,
+      });
+
+      const content = result.choices?.[0]?.message?.content;
+      if (!content || typeof content !== "string") {
+        throw new Error("Empty response from LLM");
+      }
+
+      let parsed: { documentType: string; confidence: number; fields: Record<string, string> };
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        throw new Error(`Failed to parse LLM response as JSON: ${content}`);
+      }
+
+      const label = parsed.documentType || "Unknown";
+      const typeId = LABEL_TO_ID[label] || "unknown";
+      const confidence = Math.max(0, Math.min(100, parsed.confidence || 0));
+      const fields = parsed.fields || {};
+
+      return {
+        documentTypeId: typeId,
+        documentTypeLabel: label,
+        confidence,
+        extractedData: fields,
+      };
+    }),
+});

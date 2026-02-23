@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1771828408654,
+      "tag": "0000_quiet_whiplash",
+      "breakpoints": true
+    }
+  ]
+}
