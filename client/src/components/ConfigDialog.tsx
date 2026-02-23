@@ -4,7 +4,8 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -36,22 +37,24 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content aria-describedby={undefined} className="fixed top-[50%] left-[50%] z-50 translate-x-[-50%] translate-y-[-50%] w-full max-w-3xl max-w-[calc(100%-2rem)] bg-background rounded-lg border shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 flex flex-col" style={{height:'90vh'}}>
+        <div className="px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-semibold">Configuration</DialogTitle>
+            <DialogPrimitive.Title className="text-lg font-semibold">Configuration</DialogPrimitive.Title>
             <span className="text-xs text-muted-foreground">Changes save automatically after 1 second &amp; apply to all future document uploads</span>
           </div>
-        </DialogHeader>
+        </div>
 
-        <Tabs defaultValue="templates" className="flex flex-col flex-1 min-h-0">
+        <Tabs defaultValue="templates" className="flex flex-col flex-1 min-h-0 overflow-hidden">
           <TabsList className="mx-6 mt-4 mb-0 flex-shrink-0 grid grid-cols-2 h-9">
             <TabsTrigger value="templates">Document Templates</TabsTrigger>
             <TabsTrigger value="lenders">Lender Names</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="templates" className="flex-1 min-h-0 flex flex-col mt-0">
-            <ScrollArea className="flex-1">
+          <TabsContent value="templates" className="flex-1 min-h-0 flex flex-col mt-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="px-6 py-4 space-y-5">
                 {/* How it works */}
                 <div className="bg-muted/50 rounded-md p-3 text-xs text-muted-foreground space-y-1">
@@ -130,10 +133,10 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
                   ))}
                 </div>
               </div>
-            </ScrollArea>
+            </div>
           </TabsContent>
 
-          <TabsContent value="lenders" className="flex-1 min-h-0 flex flex-col mt-0">
+          <TabsContent value="lenders" className="flex-1 min-h-0 flex flex-col mt-0 overflow-hidden">
             <LenderNamesTab />
           </TabsContent>
         </Tabs>
@@ -141,7 +144,8 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
         <div className="px-6 py-3 border-t border-border flex-shrink-0 flex justify-end">
           <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
         </div>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 }
@@ -260,7 +264,7 @@ function LenderNamesTab() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <ScrollArea className="flex-1">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-6 py-4 space-y-4">
           {/* How it works */}
           <div className="bg-muted/50 rounded-md p-3 text-xs text-muted-foreground space-y-1">
@@ -361,7 +365,7 @@ function LenderNamesTab() {
             })}
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

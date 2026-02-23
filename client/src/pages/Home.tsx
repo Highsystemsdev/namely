@@ -201,6 +201,24 @@ export default function Home() {
     }
   }
 
+  // Redact Australian TFN patterns (9 digits, optionally space-separated)
+  async function getFileForDownload(doc: ProcessedDocument): Promise<Blob> {
+    if (!config.redactTaxFileNumber) return doc.file;
+    // Only attempt text-based redaction on PDFs and text files
+    // For binary PDFs we do a best-effort byte-level replacement
+    const TFN_PATTERN = /\b(\d{3}[\s-]?\d{3}[\s-]?\d{3})\b/g;
+    try {
+      const text = await doc.file.text();
+      if (TFN_PATTERN.test(text)) {
+        const redacted = text.replace(TFN_PATTERN, "XXX XXX XXX");
+        return new Blob([redacted], { type: doc.file.type });
+      }
+    } catch {
+      // Binary file — return as-is (true PDF redaction requires a PDF library)
+    }
+    return doc.file;
+  }
+
   async function downloadAll() {
     const doneDocs = documents.filter(d => d.status === "done");
     if (doneDocs.length === 0) return;
@@ -212,7 +230,8 @@ export default function Home() {
 
       for (const doc of doneDocs) {
         const name = doc.customName || doc.proposedName;
-        zip.file(name, doc.file);
+        const fileBlob = await getFileForDownload(doc);
+        zip.file(name, fileBlob);
       }
 
       const blob = await zip.generateAsync({ type: "blob" });
@@ -237,9 +256,10 @@ export default function Home() {
     }
   }
 
-  function downloadSingle(doc: ProcessedDocument) {
+  async function downloadSingle(doc: ProcessedDocument) {
     const name = doc.customName || doc.proposedName;
-    const url = URL.createObjectURL(doc.file);
+    const fileBlob = await getFileForDownload(doc);
+    const url = URL.createObjectURL(fileBlob);
     const a = window.document.createElement("a");
     a.href = url;
     a.download = name;
