@@ -8,7 +8,8 @@ import { DOCUMENT_TYPES, LENDERS, type Lender } from "@/lib/documentTypes";
 
 export interface Config {
   separator: string;
-  dateFormat: string;
+  dateOrder: string;
+  dateSeparator: string;
   nameFormat: string;
   convertImagesToPdf: boolean;
   redactTaxFileNumber: boolean;
@@ -19,7 +20,8 @@ export interface Config {
 interface ConfigContextType {
   config: Config;
   updateSeparator: (v: string) => void;
-  updateDateFormat: (v: string) => void;
+  updateDateOrder: (v: string) => void;
+  updateDateSeparator: (v: string) => void;
   updateNameFormat: (v: string) => void;
   updateConvertImages: (v: boolean) => void;
   updateRedactTFN: (v: boolean) => void;
@@ -41,7 +43,8 @@ const defaultLenderNames = Object.fromEntries(
 
 const defaultConfig: Config = {
   separator: " ",
-  dateFormat: "DD-MM-YYYY",
+  dateOrder: "DD-MM-YYYY",
+  dateSeparator: "-", // 'none' = no separator, '-' = hyphen, etc.
   nameFormat: "first-middle-last",
   convertImagesToPdf: true,
   redactTaxFileNumber: false,
@@ -58,8 +61,12 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     setConfig(c => ({ ...c, separator: v }));
   }, []);
 
-  const updateDateFormat = useCallback((v: string) => {
-    setConfig(c => ({ ...c, dateFormat: v }));
+  const updateDateOrder = useCallback((v: string) => {
+    setConfig(c => ({ ...c, dateOrder: v }));
+  }, []);
+
+  const updateDateSeparator = useCallback((v: string) => {
+    setConfig(c => ({ ...c, dateSeparator: v }));
   }, []);
 
   const updateNameFormat = useCallback((v: string) => {
@@ -108,7 +115,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     <ConfigContext.Provider value={{
       config,
       updateSeparator,
-      updateDateFormat,
+      updateDateOrder,
+      updateDateSeparator,
       updateNameFormat,
       updateConvertImages,
       updateRedactTFN,

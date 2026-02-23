@@ -130,7 +130,8 @@ export default function Home() {
           config.templates,
           config.separator,
           config.nameFormat,
-          config.dateFormat
+          config.dateOrder,
+          config.dateSeparator
         );
         setDocuments(prev => prev.map(d => d.id === placeholder.id ? result : d));
       } catch (err) {
@@ -180,7 +181,7 @@ export default function Home() {
     setDocuments(prev => prev.map(d => {
       if (d.id !== id) return d;
       const template = config.templates[docTypeId] || docType.defaultTemplate;
-      const newName = applyTemplate(template, d.extractedData, config.separator, config.nameFormat, config.dateFormat);
+      const newName = applyTemplate(template, d.extractedData, config.separator, config.nameFormat, config.dateOrder, config.dateSeparator);
       const ext = d.proposedName.includes(".") ? "." + d.proposedName.split(".").pop() : "";
       return {
         ...d,
@@ -194,7 +195,7 @@ export default function Home() {
       const doc = documents.find(d => d.id === id);
       if (doc) {
         const template = config.templates[docTypeId] || docType.defaultTemplate;
-        const newName = applyTemplate(template, doc.extractedData, config.separator, config.nameFormat, config.dateFormat);
+        const newName = applyTemplate(template, doc.extractedData, config.separator, config.nameFormat, config.dateOrder, config.dateSeparator);
         const ext = doc.proposedName.includes(".") ? "." + doc.proposedName.split(".").pop() : "";
         setSelectedDoc({ ...doc, documentTypeId: docTypeId, documentTypeLabel: docType.label, proposedName: newName + ext, customName: null });
       }

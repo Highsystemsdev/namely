@@ -160,7 +160,8 @@ export function applyTemplate(
   extractedData: ExtractedData,
   separator: string,
   nameFormat: string,
-  dateFormat: string
+  dateOrder: string,
+  dateSeparator: string
 ): string {
   let result = template;
 
@@ -172,16 +173,16 @@ export function applyTemplate(
 
   // Apply date formatting
   if (extractedData.date) {
-    result = result.replace(/\{date\}/g, formatDate(extractedData.date, dateFormat));
+    result = result.replace(/\{date\}/g, formatDate(extractedData.date, dateOrder, dateSeparator));
   }
   if (extractedData.expiryDate) {
-    result = result.replace(/\{expiryDate\}/g, formatDate(extractedData.expiryDate, dateFormat));
+    result = result.replace(/\{expiryDate\}/g, formatDate(extractedData.expiryDate, dateOrder, dateSeparator));
   }
   if (extractedData.payPeriod) {
-    result = result.replace(/\{payPeriod\}/g, formatDate(extractedData.payPeriod, dateFormat));
+    result = result.replace(/\{payPeriod\}/g, formatDate(extractedData.payPeriod, dateOrder, dateSeparator));
   }
   if (extractedData.statementDate) {
-    result = result.replace(/\{statementDate\}/g, formatDate(extractedData.statementDate, dateFormat));
+    result = result.replace(/\{statementDate\}/g, formatDate(extractedData.statementDate, dateOrder, dateSeparator));
   }
 
   // Replace all remaining variables
@@ -223,24 +224,23 @@ function formatName(name: string, format: string): string {
   }
 }
 
-function formatDate(date: string, format: string): string {
-  // Parse DD-MM-YYYY
+function formatDate(date: string, dateOrder: string, dateSeparator: string): string {
+  // Parse input date in DD-MM-YYYY format
   const parts = date.split(/[-/]/);
   if (parts.length < 3) return date;
   const [dd, mm, yyyy] = parts;
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const monthFull = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const monthIdx = parseInt(mm) - 1;
+  const sep = dateSeparator === "none" ? "" : dateSeparator;
 
-  switch (format) {
-    case "MM-DD-YYYY": return `${mm}-${dd}-${yyyy}`;
-    case "YYYY-MM-DD": return `${yyyy}-${mm}-${dd}`;
-    case "DD/MM/YYYY": return `${dd}/${mm}/${yyyy}`;
-    case "MM/DD/YYYY": return `${mm}/${dd}/${yyyy}`;
-    case "YYYY/MM/DD": return `${yyyy}/${mm}/${dd}`;
-    case "DD MMM YYYY": return `${dd} ${monthNames[monthIdx] || mm} ${yyyy}`;
-    case "MMMM YYYY": return `${monthFull[monthIdx] || mm} ${yyyy}`;
-    default: return date;
+  // Special named-month formats ignore the separator
+  switch (dateOrder) {
+    case "DD-MMM-YYYY": return `${dd} ${monthNames[monthIdx] || mm} ${yyyy}`;
+    case "MMMM-YYYY": return `${monthFull[monthIdx] || mm} ${yyyy}`;
+    case "MM-DD-YYYY": return `${mm}${sep}${dd}${sep}${yyyy}`;
+    case "YYYY-MM-DD": return `${yyyy}${sep}${mm}${sep}${dd}`;
+    default: return `${dd}${sep}${mm}${sep}${yyyy}`; // DD-MM-YYYY
   }
 }
 
@@ -313,7 +313,8 @@ export async function processDocument(
   templates: Record<string, string>,
   separator: string,
   nameFormat: string,
-  dateFormat: string
+  dateOrder: string,
+  dateSeparator: string
 ): Promise<ProcessedDocument> {
   // Simulate AI processing delay (0.5-2 seconds per file)
   await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1500));
@@ -323,7 +324,7 @@ export async function processDocument(
   const extractedData = generateExtractedData(docType);
 
   const template = templates[typeId] || docType.defaultTemplate;
-  const proposedName = applyTemplate(template, extractedData, separator, nameFormat, dateFormat);
+  const proposedName = applyTemplate(template, extractedData, separator, nameFormat, dateOrder, dateSeparator);
 
   const ext = file.name.includes(".") ? "." + file.name.split(".").pop()!.toLowerCase() : ".pdf";
 

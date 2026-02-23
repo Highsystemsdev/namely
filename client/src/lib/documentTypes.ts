@@ -590,16 +590,23 @@ export const SEPARATOR_OPTIONS = [
   { value: ".", label: "Period (.)" },
 ];
 
-// Date format options
-export const DATE_FORMAT_OPTIONS = [
-  { value: "DD-MM-YYYY", label: "DD-MM-YYYY (20-05-2023)" },
-  { value: "MM-DD-YYYY", label: "MM-DD-YYYY (05-20-2023)" },
-  { value: "YYYY-MM-DD", label: "YYYY-MM-DD (2023-05-20)" },
-  { value: "DD/MM/YYYY", label: "DD/MM/YYYY (20/05/2023)" },
-  { value: "MM/DD/YYYY", label: "MM/DD/YYYY (05/20/2023)" },
-  { value: "YYYY/MM/DD", label: "YYYY/MM/DD (2023/05/20)" },
-  { value: "DD MMM YYYY", label: "DD MMM YYYY (20 May 2023)" },
-  { value: "MMMM YYYY", label: "MMMM YYYY (May 2023)" },
+// Date order options (the arrangement of day/month/year parts)
+export const DATE_ORDER_OPTIONS = [
+  { value: "DD-MM-YYYY", label: "DD/MM/YYYY (day first)" },
+  { value: "MM-DD-YYYY", label: "MM/DD/YYYY (month first)" },
+  { value: "YYYY-MM-DD", label: "YYYY/MM/DD (year first)" },
+  { value: "DD-MMM-YYYY", label: "DD Mon YYYY (20 May 2023)" },
+  { value: "MMMM-YYYY", label: "Month YYYY (May 2023)" },
+];
+
+// Date separator options (the character placed between date parts)
+export const DATE_SEPARATOR_OPTIONS = [
+  { value: "none", label: "None (20052023)" },
+  { value: "-", label: "Hyphen (20-05-2023)" },
+  { value: "/", label: "Slash (20/05/2023)" },
+  { value: ".", label: "Period (20.05.2023)" },
+  { value: "_", label: "Underscore (20_05_2023)" },
+  { value: " ", label: "Space (20 05 2023)" },
 ];
 
 // Name format options

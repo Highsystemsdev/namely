@@ -21,7 +21,8 @@ import {
   LENDER_CATEGORIES,
   LENDER_CATEGORY_GROUPS,
   SEPARATOR_OPTIONS,
-  DATE_FORMAT_OPTIONS,
+  DATE_ORDER_OPTIONS,
+  DATE_SEPARATOR_OPTIONS,
   NAME_FORMAT_OPTIONS,
 } from "@/lib/documentTypes";
 import { applyTemplate } from "@/lib/aiProcessor";
@@ -33,7 +34,7 @@ interface ConfigDialogProps {
 }
 
 export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
-  const { config, updateSeparator, updateDateFormat, updateNameFormat, updateConvertImages, updateRedactTFN, resetAllTemplates } = useConfig();
+  const { config, updateSeparator, updateDateOrder, updateDateSeparator, updateNameFormat, updateConvertImages, updateRedactTFN, resetAllTemplates } = useConfig();
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
@@ -69,7 +70,7 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
                 {/* Global settings */}
                 <div className="space-y-3">
                   <p className="text-xs text-muted-foreground">Customise how files are named for each document type. Use variables like <code className="bg-muted px-1 rounded">{"{name}"}</code>, <code className="bg-muted px-1 rounded">{"{documentType}"}</code>, etc.</p>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium">Separator</Label>
                       <Select value={config.separator} onValueChange={updateSeparator}>
@@ -84,13 +85,26 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">Date Format</Label>
-                      <Select value={config.dateFormat} onValueChange={updateDateFormat}>
+                      <Label className="text-xs font-medium">Date Order</Label>
+                      <Select value={config.dateOrder} onValueChange={updateDateOrder}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {DATE_FORMAT_OPTIONS.map(o => (
+                          {DATE_ORDER_OPTIONS.map((o: {value: string; label: string}) => (
+                            <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium">Date Separator</Label>
+                      <Select value={config.dateSeparator} onValueChange={updateDateSeparator}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DATE_SEPARATOR_OPTIONS.map((o: {value: string; label: string}) => (
                             <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
                           ))}
                         </SelectContent>
@@ -163,7 +177,8 @@ function DocumentTemplateRow({ docTypeId }: { docTypeId: string }) {
     Object.fromEntries(docType.variables.map(v => [v.key, v.example])),
     config.separator,
     config.nameFormat,
-    config.dateFormat
+    config.dateOrder,
+    config.dateSeparator
   );
 
   function insertVariable(varKey: string) {
