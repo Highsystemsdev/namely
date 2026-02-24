@@ -308,7 +308,7 @@ export default function Home() {
           <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
           <div className="text-xs text-blue-700 space-y-0.5">
             <p>Your documents are processed locally and are not saved. Refreshing the page will remove uploaded documents.</p>
-            <p>Please upload zip files or extract documents from zip files before uploading.</p>
+            <p>Please extract documents from .zip files before uploading.</p>
           </div>
         </div>
 
@@ -492,8 +492,13 @@ function DocumentRow({
     );
   }
 
+  const isLowConfidence = doc.confidence > 0 && doc.confidence < 80;
+
   return (
-    <div className="doc-row group grid grid-cols-[1fr_2fr_100px_80px] gap-3 px-4 py-3 items-center">
+    <div className={cn(
+      "doc-row group grid grid-cols-[1fr_2fr_100px_80px] gap-3 px-4 py-3 items-center",
+      isLowConfidence && "bg-orange-50 border-l-2 border-l-orange-400"
+    )}>
       {/* Original name */}
       <div className="flex items-center gap-2 min-w-0">
         <span className="text-sm flex-shrink-0">{getFileIcon(doc.fileType)}</span>

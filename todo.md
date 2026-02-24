@@ -53,3 +53,8 @@
 - [x] Fix: separator now only inserted at segment boundaries — literal text like "Drivers License" and "Notice of Assessment" preserves internal spaces
 - [x] Add: spaced hyphen ' - ' as a separator option (now the default)
 - [x] Update: defaults changed to spaced hyphen, YYYY-MM-DD date order, no date separator, First Middle Last name format
+
+## New Features (Round 4)
+- [x] Low-confidence row highlight: rows with confidence < 80% highlighted in orange with readable text contrast
+- [x] Config persistence: "Save as Default" button in ConfigDialog writes config to server-side JSON file; loaded on startup
+- [x] Info bar text update: second line changed to "Please extract documents from .zip files before uploading."

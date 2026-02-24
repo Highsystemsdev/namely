@@ -1,10 +1,12 @@
 /*
  * Doc Renamer — Configuration Context
  * Manages global settings: separator, date format, name format, templates, lender names
+ * Supports "Save as Default" which persists config to a server-side JSON file.
  */
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { DOCUMENT_TYPES, LENDERS, type Lender } from "@/lib/documentTypes";
+import { trpc } from "@/lib/trpc";
 
 export interface Config {
   separator: string;
@@ -31,6 +33,8 @@ interface ConfigContextType {
   updateLenderName: (lenderId: string, name: string) => void;
   resetLenderName: (lenderId: string) => void;
   getLenderName: (lenderId: string) => string;
+  saveAsDefault: () => Promise<void>;
+  isSaving: boolean;
 }
 
 const defaultTemplates = Object.fromEntries(
@@ -41,7 +45,7 @@ const defaultLenderNames = Object.fromEntries(
   LENDERS.map(l => [l.id, l.abbreviation])
 );
 
-const defaultConfig: Config = {
+export const defaultConfig: Config = {
   separator: " - ",
   dateOrder: "YYYY-MM-DD",
   dateSeparator: "none",
@@ -56,6 +60,36 @@ const ConfigContext = createContext<ConfigContextType | null>(null);
 
 export function ConfigProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<Config>(defaultConfig);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load saved config from server on mount
+  const { data: savedConfig } = trpc.config.load.useQuery(undefined, {
+    retry: false,
+    staleTime: Infinity,
+  });
+
+  useEffect(() => {
+    if (savedConfig) {
+      // Merge saved config with defaults to handle any new fields added since last save
+      setConfig({
+        ...defaultConfig,
+        ...savedConfig,
+        templates: { ...defaultTemplates, ...savedConfig.templates },
+        lenderNames: { ...defaultLenderNames, ...savedConfig.lenderNames },
+      });
+    }
+  }, [savedConfig]);
+
+  const saveDefaultMutation = trpc.config.saveDefault.useMutation();
+
+  const saveAsDefault = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      await saveDefaultMutation.mutateAsync(config);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [config, saveDefaultMutation]);
 
   const updateSeparator = useCallback((v: string) => {
     setConfig(c => ({ ...c, separator: v }));
@@ -126,6 +160,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       updateLenderName,
       resetLenderName,
       getLenderName,
+      saveAsDefault,
+      isSaving,
     }}>
       {children}
     </ConfigContext.Provider>

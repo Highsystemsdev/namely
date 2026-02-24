@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RotateCcw, ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { RotateCcw, ChevronDown, ChevronUp, Search, X, Save, CheckCircle2 } from "lucide-react";
 import { useConfig } from "@/contexts/ConfigContext";
 import {
   DOCUMENT_TYPES,
@@ -34,7 +34,14 @@ interface ConfigDialogProps {
 }
 
 export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
-  const { config, updateSeparator, updateDateOrder, updateDateSeparator, updateNameFormat, updateConvertImages, updateRedactTFN, resetAllTemplates } = useConfig();
+  const { config, updateSeparator, updateDateOrder, updateDateSeparator, updateNameFormat, updateConvertImages, updateRedactTFN, resetAllTemplates, saveAsDefault, isSaving } = useConfig();
+  const [savedFeedback, setSavedFeedback] = useState(false);
+
+  async function handleSaveDefault() {
+    await saveAsDefault();
+    setSavedFeedback(true);
+    setTimeout(() => setSavedFeedback(false), 2500);
+  }
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
@@ -44,7 +51,7 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
         <div className="px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-center justify-between">
             <DialogPrimitive.Title className="text-lg font-semibold">Configuration</DialogPrimitive.Title>
-            <span className="text-xs text-muted-foreground">Changes save automatically after 1 second &amp; apply to all future document uploads</span>
+            <span className="text-xs text-muted-foreground">Changes apply immediately to all future document uploads</span>
           </div>
         </div>
 
@@ -155,7 +162,23 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
           </TabsContent>
         </Tabs>
 
-        <div className="px-6 py-3 border-t border-border flex-shrink-0 flex justify-end">
+        <div className="px-6 py-3 border-t border-border flex-shrink-0 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              onClick={handleSaveDefault}
+              disabled={isSaving}
+            >
+              {savedFeedback ? (
+                <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />Saved!</>
+              ) : (
+                <><Save className="h-3.5 w-3.5" />{isSaving ? "Saving..." : "Save as Default"}</>
+              )}
+            </Button>
+            <span className="text-xs text-muted-foreground">Saves your current settings to disk so they load automatically next time</span>
+          </div>
           <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
         </div>
         </DialogPrimitive.Content>
