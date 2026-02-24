@@ -33,6 +33,10 @@
 ## Bug Fixes
 - [x] Fix: LLM response parsing failure — removed unsupported json_object response_format for Gemini, added robust JSON extraction (strips thinking tags, code fences)
 
+## In Progress
+- [x] Default output extension to .pdf regardless of input file type
+- [x] Normalise extracted names to Firstname Surname order (handles "Surname, Firstname" and "SURNAME Firstname" patterns)
+
 ## Pending / Future
 - [ ] Persist configuration to localStorage (survives page refresh)
 - [ ] True PDF TFN redaction using pdf-lib (currently text-only)

@@ -167,9 +167,10 @@ export function applyTemplate(
 ): string {
   let result = template;
 
-  // Apply name formatting
+  // Apply name formatting — normalise order first, then apply user's format preference
   if (extractedData.name) {
-    const formatted = formatName(extractedData.name, nameFormat);
+    const normalised = normaliseNameOrder(extractedData.name);
+    const formatted = formatName(normalised, nameFormat);
     result = result.replace(/\{name\}/g, formatted);
   }
 
@@ -204,6 +205,53 @@ export function applyTemplate(
   result = result.replace(/[/\\:*?"<>|]/g, "").trim();
 
   return result;
+}
+
+/**
+ * Normalise a name to "Firstname Surname" order.
+ *
+ * Handles three common patterns from documents:
+ *  1. "Surname, Firstname [Middle]"  — comma signals surname-first
+ *  2. "SURNAME Firstname"            — all-caps first token signals surname
+ *  3. "Firstname [Middle] Surname"   — already correct, return as-is
+ */
+export function normaliseNameOrder(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+
+  // Pattern 1: "Surname, Firstname" or "Surname, Firstname Middle"
+  if (trimmed.includes(",")) {
+    const [surnamePart, givenPart] = trimmed.split(",", 2);
+    const surname = surnamePart.trim();
+    const given = (givenPart || "").trim();
+    if (given) {
+      // Normalise each part to title case
+      const toTitle = (s: string) =>
+        s.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+      return `${toTitle(given)} ${toTitle(surname)}`;
+    }
+    return trimmed; // can't determine order, return unchanged
+  }
+
+  // Pattern 2: "SURNAME Firstname" — first token is all-uppercase (2+ chars)
+  const tokens = trimmed.split(/\s+/);
+  if (tokens.length >= 2) {
+    const first = tokens[0];
+    // All-caps token of 2+ chars = surname
+    if (first.length >= 2 && first === first.toUpperCase() && /^[A-Z]+$/.test(first)) {
+      const surname = first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+      const given = tokens
+        .slice(1)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" ");
+      return `${given} ${surname}`;
+    }
+  }
+
+  // Pattern 3: already "Firstname [Middle] Surname" — return with title-case normalisation
+  return tokens
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
 }
 
 function formatName(name: string, format: string): string {
@@ -319,7 +367,8 @@ export async function processDocument(
   dateSeparator: string
 ): Promise<ProcessedDocument> {
   const id = Math.random().toString(36).slice(2);
-  const ext = file.name.includes(".") ? "." + file.name.split(".").pop()!.toLowerCase() : ".pdf";
+  // Always output as .pdf — images and scanned docs are also saved as PDF
+  const ext = ".pdf";
 
   // Step 1: Extract text or render image from the document
   const extraction = await extractDocumentContent(file);
