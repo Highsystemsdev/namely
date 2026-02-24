@@ -37,6 +37,12 @@
 - [x] Default output extension to .pdf regardless of input file type
 - [x] Normalise extracted names to Firstname Surname order (handles "Surname, Firstname" and "SURNAME Firstname" patterns)
 
+## Completed Fixes (Round 2)
+- [x] Fix: name normalisation incorrectly reorders middle-initial names (e.g. 'John J Kennedy' → 'J Kennedy John')
+- [x] Fix: name normalisation incorrectly reverses already-correct names (e.g. 'Natalia Siwek' → 'Siwek Natalia')
+- [x] Fix: separator applied between every word instead of only between template variable segments
+- [x] Fix: AI system prompt updated with document-type-aware name order guidance (Medicare, Passport, ATO, etc.)
+
 ## Pending / Future
 - [ ] Persist configuration to localStorage (survives page refresh)
 - [ ] True PDF TFN redaction using pdf-lib (currently text-only)

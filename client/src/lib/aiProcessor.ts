@@ -165,16 +165,38 @@ export function applyTemplate(
   dateOrder: string,
   dateSeparator: string
 ): string {
-  let result = template;
+  // Step 1: Apply the separator to the TEMPLATE structure before substitution.
+  // This ensures the separator only appears between {variable} tokens, never
+  // within the resolved values (e.g. "John Smith" stays "John Smith", not "John-Smith").
+  // We replace spaces that sit between template tokens (literal text and {variables}).
+  let workTemplate = template;
+  if (separator !== " ") {
+    // Replace spaces between template tokens with the separator.
+    // A "template space" is a space that is NOT inside a {variable} placeholder.
+    // We do this by splitting on {variable} tokens, joining with separator, then
+    // replacing spaces within each literal segment with the separator too.
+    workTemplate = workTemplate
+      .split(/(\{[^}]+\})/g)  // split on {variable} tokens, keeping them
+      .map(part => {
+        if (part.startsWith("{") && part.endsWith("}")) {
+          return part; // keep variable placeholder unchanged
+        }
+        // Replace spaces in literal text segments with the separator
+        return part.replace(/ /g, separator);
+      })
+      .join("");
+  }
 
-  // Apply name formatting — normalise order first, then apply user's format preference
+  let result = workTemplate;
+
+  // Step 2: Apply name formatting — normalise order first, then apply user's format preference
   if (extractedData.name) {
     const normalised = normaliseNameOrder(extractedData.name);
     const formatted = formatName(normalised, nameFormat);
     result = result.replace(/\{name\}/g, formatted);
   }
 
-  // Apply date formatting
+  // Step 3: Apply date formatting
   if (extractedData.date) {
     result = result.replace(/\{date\}/g, formatDate(extractedData.date, dateOrder, dateSeparator));
   }
@@ -188,20 +210,22 @@ export function applyTemplate(
     result = result.replace(/\{statementDate\}/g, formatDate(extractedData.statementDate, dateOrder, dateSeparator));
   }
 
-  // Replace all remaining variables
+  // Step 4: Replace all remaining variables
   for (const [key, value] of Object.entries(extractedData)) {
     result = result.replace(new RegExp(`\\{${key}\\}`, "g"), value);
   }
 
-  // Remove any unresolved variables
+  // Step 5: Remove any unresolved variables and clean up double-separators
   result = result.replace(/\{[^}]+\}/g, "").trim();
-
-  // Apply separator (replace spaces with chosen separator)
   if (separator !== " ") {
-    result = result.replace(/ /g, separator);
+    const escapedSep = separator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // Collapse multiple consecutive separators into one (from removed variables)
+    result = result.replace(new RegExp(`${escapedSep}{2,}`, "g"), separator);
+    // Strip leading/trailing separators
+    result = result.replace(new RegExp(`^${escapedSep}+|${escapedSep}+$`, "g"), "");
   }
 
-  // Sanitize filename
+  // Step 6: Sanitize filename characters
   result = result.replace(/[/\\:*?"<>|]/g, "").trim();
 
   return result;
@@ -237,8 +261,8 @@ export function normaliseNameOrder(raw: string): string {
   const tokens = trimmed.split(/\s+/);
   if (tokens.length >= 2) {
     const first = tokens[0];
-    // All-caps token of 2+ chars = surname
-    if (first.length >= 2 && first === first.toUpperCase() && /^[A-Z]+$/.test(first)) {
+    // All-caps token of 3+ chars = surname (avoids treating single initials like 'J' as surnames)
+    if (first.length >= 3 && first === first.toUpperCase() && /^[A-Z]+$/.test(first)) {
       const surname = first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
       const given = tokens
         .slice(1)

@@ -108,7 +108,12 @@ DOCUMENT TYPES (choose exactly one):
 ${DOCUMENT_TYPE_LIST.join(", ")}
 
 FIELD EXTRACTION RULES:
-- name: Full name of the primary person (e.g. "John Michael Smith"). For companies, use the company name.
+- name: Full name of the primary person. ALWAYS return in "Firstname [Middle] Surname" order (e.g. "John Michael Smith", "Sarah J Williams"). Never return "Surname, Firstname" or "SURNAME Firstname" format. For companies, use the company name.
+  Document-type name format guidance:
+  * Medicare Card, Driver's License, Passport, Birth Certificate, Marriage Certificate, Citizenship Certificate: names are printed as "SURNAME Firstname" or "Firstname Surname" — always convert to "Firstname Surname" order.
+  * Notice of Assessment, Individual Tax Return, Company Tax Return, ATO Tax Account: names may appear as "Surname, Firstname Initial" (e.g. "Kennedy, John J") — always convert to "Firstname Initial Surname" (e.g. "John J Kennedy").
+  * Payslip, Income Statement, Employment Contract: names are typically "Firstname Surname" — return as-is.
+  * For all other documents: return the name in natural "Firstname [Middle] Surname" order.
 - date: Primary document date in DD-MM-YYYY format (e.g. "30-06-2023")
 - expiryDate: Expiry date in DD-MM-YYYY format
 - payPeriod: Pay period end date in DD-MM-YYYY format
