@@ -27,6 +27,21 @@ export const isFolderPickerSupported: boolean =
   typeof window !== "undefined" && "showDirectoryPicker" in window;
 
 /**
+ * True when the page is running inside a cross-origin iframe.
+ * showDirectoryPicker is blocked in this context by browsers.
+ */
+export const isInsideCrossOriginIframe: boolean = (() => {
+  if (typeof window === "undefined") return false;
+  try {
+    // If window.top is accessible and equals window, we are the top frame.
+    return window.self !== window.top;
+  } catch {
+    // SecurityError accessing window.top means we are definitely in a cross-origin iframe.
+    return true;
+  }
+})();
+
+/**
  * Recursively walk a FileSystemDirectoryHandle and collect all supported files.
  * @param dirHandle  The directory to walk
  * @param pathPrefix Relative path prefix for display (e.g. "subdir/")

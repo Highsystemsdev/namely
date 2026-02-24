@@ -34,7 +34,7 @@ import {
 import { processDocument, applyTemplate, type ProcessedDocument } from "@/lib/aiProcessor";
 import { DOCUMENT_TYPES } from "@/lib/documentTypes";
 import { useConfig } from "@/contexts/ConfigContext";
-import { isFolderPickerSupported, pickFolder } from "@/hooks/useFolderPicker";
+import { isFolderPickerSupported, isInsideCrossOriginIframe, pickFolder } from "@/hooks/useFolderPicker";
 import { applyFolderRenames } from "@/lib/folderRenamer";
 
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/heic", "image/heif", "image/webp", "application/zip"];
@@ -484,7 +484,7 @@ export default function Home() {
                   + Upload files
                 </button>
                 <span className="text-muted-foreground">or drop files here</span>
-                {isFolderPickerSupported && (
+                {isFolderPickerSupported && !isInsideCrossOriginIframe && (
                   <>
                     <span className="text-muted-foreground">·</span>
                     <button
@@ -508,6 +508,21 @@ export default function Home() {
               {!isFolderPickerSupported && (
                 <p className="text-xs text-amber-600 mt-1">
                   Folder mode requires Chrome, Edge, or Firefox. Safari is not supported.
+                </p>
+              )}
+              {isFolderPickerSupported && isInsideCrossOriginIframe && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Folder mode is unavailable in the preview panel.{" "}
+                  <a
+                    href={window.location.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline font-semibold hover:text-amber-700"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    Open in a new tab
+                  </a>
+                  {" "}to use folder renaming.
                 </p>
               )}
             </div>

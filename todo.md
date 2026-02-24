@@ -66,3 +66,6 @@
 - [x] Home.tsx: Open folder button in upload zone, feeds folder files into existing AI pipeline, wires preview dialog and apply renames
 - [x] Safari/unsupported browser fallback: folder button hidden, polite note shown
 - [x] 7 new vitest tests for folderRenamer (37 total passing)
+
+## Bug Fixes (Round 6)
+- [x] Fix: showDirectoryPicker blocked in cross-origin iframe — detect iframe context, show "Open in new tab" guidance instead of error
