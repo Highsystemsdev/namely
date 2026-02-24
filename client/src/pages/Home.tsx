@@ -21,13 +21,21 @@ import {
   Edit2,
   ChevronRight,
   Info,
+  FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfigDialog } from "@/components/ConfigDialog";
 import { DocumentDetailDialog } from "@/components/DocumentDetailDialog";
+import {
+  FolderRenamePreviewDialog,
+  type FolderRenameItem,
+  type ApplyResult,
+} from "@/components/FolderRenamePreviewDialog";
 import { processDocument, applyTemplate, type ProcessedDocument } from "@/lib/aiProcessor";
 import { DOCUMENT_TYPES } from "@/lib/documentTypes";
 import { useConfig } from "@/contexts/ConfigContext";
+import { isFolderPickerSupported, pickFolder } from "@/hooks/useFolderPicker";
+import { applyFolderRenames } from "@/lib/folderRenamer";
 
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/heic", "image/heif", "image/webp", "application/zip"];
 const ACCEPTED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp", ".zip"];
@@ -67,6 +75,8 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
 
 export default function Home() {
   const { config } = useConfig();
+
+  // ── Upload mode state ──────────────────────────────────────────────────────
   const [documents, setDocuments] = useState<ProcessedDocument[]>([]);
   const [configOpen, setConfigOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<ProcessedDocument | null>(null);
@@ -75,9 +85,17 @@ export default function Home() {
   const [editValue, setEditValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Folder mode state ──────────────────────────────────────────────────────
+  const [isFolderLoading, setIsFolderLoading] = useState(false);
+  const [folderItems, setFolderItems] = useState<FolderRenameItem[]>([]);
+  const [folderPreviewOpen, setFolderPreviewOpen] = useState(false);
+  const [isApplyingRenames, setIsApplyingRenames] = useState(false);
+  const [applyResults, setApplyResults] = useState<ApplyResult[]>([]);
+
   const processingCount = documents.filter(d => d.status === "processing").length;
   const doneCount = documents.filter(d => d.status === "done").length;
 
+  // ── Upload mode handlers ───────────────────────────────────────────────────
   async function handleFiles(files: FileList | File[]) {
     const fileArray = Array.from(files);
     const validFiles: File[] = [];
@@ -100,7 +118,6 @@ export default function Home() {
 
     if (validFiles.length === 0) return;
 
-    // Add processing placeholders
     const placeholders: ProcessedDocument[] = validFiles.map(f => ({
       id: Math.random().toString(36).slice(2),
       originalName: f.name,
@@ -118,7 +135,6 @@ export default function Home() {
 
     setDocuments(prev => [...prev, ...placeholders]);
 
-    // Process each file
     for (let i = 0; i < validFiles.length; i++) {
       const placeholder = placeholders[i];
       try {
@@ -201,7 +217,6 @@ export default function Home() {
     }
   }
 
-  // Redact Australian TFN patterns (9 digits, optionally space-separated)
   async function getFileForDownload(doc: ProcessedDocument): Promise<Blob> {
     if (!config.redactTaxFileNumber) return doc.file;
     const TFN_PATTERN = /\b(\d{3}[\s-]?\d{3}[\s-]?\d{3})\b/g;
@@ -240,7 +255,6 @@ export default function Home() {
       URL.revokeObjectURL(url);
       toast.success(`Downloaded ${doneDocs.length} documents`);
     } catch {
-      // Fallback: download individually
       for (const doc of doneDocs) {
         const name = doc.customName || doc.proposedName;
         const url = URL.createObjectURL(doc.file);
@@ -276,6 +290,105 @@ export default function Home() {
       : "";
     updateDocumentName(doc.id, editValue + ext);
     setEditingId(null);
+  }
+
+  // ── Folder mode handlers ───────────────────────────────────────────────────
+
+  async function handleOpenFolder() {
+    if (!isFolderPickerSupported) return;
+    setIsFolderLoading(true);
+    try {
+      const folderFiles = await pickFolder();
+      if (!folderFiles) {
+        // User cancelled
+        setIsFolderLoading(false);
+        return;
+      }
+      if (folderFiles.length === 0) {
+        toast.info("No supported files found in the selected folder.");
+        setIsFolderLoading(false);
+        return;
+      }
+
+      toast.info(`Found ${folderFiles.length} file${folderFiles.length !== 1 ? "s" : ""}. Analysing with AI…`);
+
+      // Process all files through the existing AI pipeline
+      const items: FolderRenameItem[] = [];
+
+      for (const folderFile of folderFiles) {
+        try {
+          const doc = await processDocument(
+            folderFile.file,
+            config.templates,
+            config.separator,
+            config.nameFormat,
+            config.dateOrder,
+            config.dateSeparator
+          );
+          items.push({ folderFile, doc, approved: true });
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          console.error('[DocRenamer] Folder processing error for', folderFile.relativePath, ':', errMsg);
+          // Add as error item so user can see it in the preview
+          const errorDoc: ProcessedDocument = {
+            id: Math.random().toString(36).slice(2),
+            originalName: folderFile.file.name,
+            fileSize: folderFile.file.size,
+            fileType: folderFile.file.type || "application/octet-stream",
+            documentTypeId: "",
+            documentTypeLabel: "Error",
+            confidence: 0,
+            extractedData: {},
+            proposedName: folderFile.file.name,
+            customName: null,
+            status: "error",
+            errorMessage: errMsg,
+            file: folderFile.file,
+          };
+          items.push({ folderFile, doc: errorDoc, approved: false });
+        }
+      }
+
+      setFolderItems(items);
+      setApplyResults([]);
+      setFolderPreviewOpen(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to open folder: ${msg}`);
+    } finally {
+      setIsFolderLoading(false);
+    }
+  }
+
+  function handleFolderApprovalChange(id: string, approved: boolean) {
+    setFolderItems(prev => prev.map(item =>
+      item.doc.id === id ? { ...item, approved } : item
+    ));
+  }
+
+  function handleFolderApproveAll() {
+    setFolderItems(prev => prev.map(item =>
+      item.doc.status !== "error" ? { ...item, approved: true } : item
+    ));
+  }
+
+  async function handleApplyRenames() {
+    setIsApplyingRenames(true);
+    setApplyResults([]);
+
+    await applyFolderRenames(folderItems, (result) => {
+      setApplyResults(prev => [...prev, result]);
+    });
+
+    setIsApplyingRenames(false);
+    toast.success("Rename operation complete.");
+  }
+
+  function handleFolderPreviewClose() {
+    if (isApplyingRenames) return;
+    setFolderPreviewOpen(false);
+    setFolderItems([]);
+    setApplyResults([]);
   }
 
   return (
@@ -368,13 +481,35 @@ export default function Home() {
                   className="text-primary hover:underline font-semibold"
                   onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
                 >
-                  + Upload
+                  + Upload files
                 </button>
-                <span className="text-muted-foreground">Or drop files</span>
+                <span className="text-muted-foreground">or drop files here</span>
+                {isFolderPickerSupported && (
+                  <>
+                    <span className="text-muted-foreground">·</span>
+                    <button
+                      className="text-primary hover:underline font-semibold flex items-center gap-1"
+                      onClick={e => { e.stopPropagation(); handleOpenFolder(); }}
+                      disabled={isFolderLoading}
+                    >
+                      {isFolderLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <FolderOpen className="h-3.5 w-3.5" />
+                      )}
+                      Open folder
+                    </button>
+                  </>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Supports PDF, PNG, JPG, HEIC, HEIF, WEBP, ZIP (Max 50MB per file, 25MB per ZIP)
+                Supports PDF, PNG, JPG, HEIC, HEIF, WEBP (Max 50MB per file)
               </p>
+              {!isFolderPickerSupported && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Folder mode requires Chrome, Edge, or Firefox. Safari is not supported.
+                </p>
+              )}
             </div>
             <input
               ref={fileInputRef}
@@ -427,6 +562,16 @@ export default function Home() {
         onClose={() => setSelectedDoc(null)}
         onUpdateName={updateDocumentName}
         onUpdateDocType={updateDocumentType}
+      />
+      <FolderRenamePreviewDialog
+        open={folderPreviewOpen}
+        items={folderItems}
+        isApplying={isApplyingRenames}
+        applyResults={applyResults}
+        onApprovalChange={handleFolderApprovalChange}
+        onApproveAll={handleFolderApproveAll}
+        onApplyRenames={handleApplyRenames}
+        onClose={handleFolderPreviewClose}
       />
     </div>
   );
@@ -534,7 +679,10 @@ function DocumentRow({
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-xs filename-mono text-foreground truncate cursor-default flex-1 min-w-0">
+                <span className={cn(
+                  "text-xs filename-mono truncate cursor-default flex-1 min-w-0",
+                  isLowConfidence ? "text-orange-800" : "text-foreground"
+                )}>
                   {displayName}
                 </span>
               </TooltipTrigger>

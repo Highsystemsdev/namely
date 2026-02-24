@@ -58,3 +58,11 @@
 - [x] Low-confidence row highlight: rows with confidence < 80% highlighted in orange with readable text contrast
 - [x] Config persistence: "Save as Default" button in ConfigDialog writes config to server-side JSON file; loaded on startup
 - [x] Info bar text update: second line changed to "Please extract documents from .zip files before uploading."
+
+## New Features (Round 5 - Folder Mode)
+- [x] useFolderPicker hook: showDirectoryPicker with readwrite mode, recursive directory walk, returns FolderFile objects with handles
+- [x] folderRenamer utility: copy-verify-delete strategy, size verification, collision handling with numeric suffix, per-file error isolation
+- [x] FolderRenamePreviewDialog: full before/after table, per-row approve/skip checkboxes, low-confidence orange highlight, progress indicators
+- [x] Home.tsx: Open folder button in upload zone, feeds folder files into existing AI pipeline, wires preview dialog and apply renames
+- [x] Safari/unsupported browser fallback: folder button hidden, polite note shown
+- [x] 7 new vitest tests for folderRenamer (37 total passing)
