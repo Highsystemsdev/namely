@@ -30,6 +30,9 @@
 - [x] tRPC classify mutation with Zod input validation
 - [x] Vitest tests for classify router (3 tests passing)
 
+## Bug Fixes
+- [x] Fix: LLM response parsing failure — removed unsupported json_object response_format for Gemini, added robust JSON extraction (strips thinking tags, code fences)
+
 ## Pending / Future
 - [ ] Persist configuration to localStorage (survives page refresh)
 - [ ] True PDF TFN redaction using pdf-lib (currently text-only)

@@ -4,24 +4,7 @@ import type { TrpcContext } from "./_core/context";
 
 // Mock the invokeLLM helper so tests don't make real API calls
 vi.mock("./_core/llm", () => ({
-  invokeLLM: vi.fn().mockResolvedValue({
-    choices: [
-      {
-        message: {
-          content: JSON.stringify({
-            documentType: "Payslip",
-            confidence: 95,
-            fields: {
-              name: "John Smith",
-              employer: "Acme Corp",
-              payPeriod: "31-01-2025",
-              grossPay: "$4,500.00",
-            },
-          }),
-        },
-      },
-    ],
-  }),
+  invokeLLM: vi.fn(),
 }));
 
 function createPublicContext(): TrpcContext {
@@ -32,7 +15,29 @@ function createPublicContext(): TrpcContext {
   };
 }
 
+function mockLLMResponse(content: string) {
+  return {
+    choices: [{ message: { content } }],
+  };
+}
+
 describe("docs.classify", () => {
+  beforeEach(async () => {
+    const { invokeLLM } = await import("./_core/llm");
+    vi.mocked(invokeLLM).mockResolvedValue(
+      mockLLMResponse(JSON.stringify({
+        documentType: "Payslip",
+        confidence: 95,
+        fields: {
+          name: "John Smith",
+          employer: "Acme Corp",
+          payPeriod: "31-01-2025",
+          grossPay: "$4,500.00",
+        },
+      }))
+    );
+  });
+
   it("classifies a text-based payslip and returns structured fields", async () => {
     const ctx = createPublicContext();
     const caller = appRouter.createCaller(ctx);
@@ -50,21 +55,62 @@ describe("docs.classify", () => {
     expect(result.extractedData.employer).toBe("Acme Corp");
   });
 
+  it("handles JSON wrapped in markdown code fences (Gemini style)", async () => {
+    const { invokeLLM } = await import("./_core/llm");
+    vi.mocked(invokeLLM).mockResolvedValueOnce(
+      mockLLMResponse("```json\n" + JSON.stringify({
+        documentType: "Notice of Assessment",
+        confidence: 88,
+        fields: { name: "Jane Doe", financialYear: "2022-23", taxableIncome: "$85,000" },
+      }) + "\n```")
+    );
+
+    const ctx = createPublicContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.docs.classify({
+      text: "NOTICE OF ASSESSMENT Jane Doe 2022-23",
+      isImageMode: false,
+      filename: "noa.pdf",
+    });
+
+    expect(result.documentTypeId).toBe("notice-of-assessment");
+    expect(result.confidence).toBe(88);
+    expect(result.extractedData.financialYear).toBe("2022-23");
+  });
+
+  it("handles JSON with leading thinking tags stripped", async () => {
+    const { invokeLLM } = await import("./_core/llm");
+    vi.mocked(invokeLLM).mockResolvedValueOnce(
+      mockLLMResponse("<thinking>Let me analyse this document...</thinking>\n" + JSON.stringify({
+        documentType: "Payslip",
+        confidence: 90,
+        fields: { name: "Bob Jones" },
+      }))
+    );
+
+    const ctx = createPublicContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.docs.classify({
+      text: "PAYSLIP Bob Jones",
+      isImageMode: false,
+      filename: "payslip.pdf",
+    });
+
+    expect(result.documentTypeId).toBe("payslip");
+    expect(result.extractedData.name).toBe("Bob Jones");
+  });
+
   it("returns Unknown type with confidence 0 when LLM returns Unknown", async () => {
     const { invokeLLM } = await import("./_core/llm");
-    vi.mocked(invokeLLM).mockResolvedValueOnce({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              documentType: "Unknown",
-              confidence: 0,
-              fields: {},
-            }),
-          },
-        },
-      ],
-    });
+    vi.mocked(invokeLLM).mockResolvedValueOnce(
+      mockLLMResponse(JSON.stringify({
+        documentType: "Unknown",
+        confidence: 0,
+        fields: {},
+      }))
+    );
 
     const ctx = createPublicContext();
     const caller = appRouter.createCaller(ctx);

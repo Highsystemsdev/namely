@@ -197,8 +197,8 @@ export const classifyRouter = router({
           { role: "system", content: buildSystemPrompt() },
           { role: "user", content: userContent as any },
         ],
-        response_format: { type: "json_object" },
-        max_tokens: 1000,
+        // Note: Do NOT pass response_format — Gemini 2.5 Flash does not support
+        // the OpenAI json_object mode. We instruct via the system prompt instead.
       });
 
       const content = result.choices?.[0]?.message?.content;
@@ -206,11 +206,31 @@ export const classifyRouter = router({
         throw new Error("Empty response from LLM");
       }
 
+      // Gemini may wrap JSON in markdown code fences or thinking tags — extract robustly
+      let jsonStr = content.trim();
+
+      // Strip thinking tags if present (e.g. <thinking>...</thinking>)
+      jsonStr = jsonStr.replace(/<thinking>[\s\S]*?<\/thinking>/gi, "").trim();
+
+      // Extract JSON from markdown code fences if present
+      const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fenceMatch) {
+        jsonStr = fenceMatch[1].trim();
+      } else {
+        // Find the first { and last } to extract raw JSON
+        const start = jsonStr.indexOf("{");
+        const end = jsonStr.lastIndexOf("}");
+        if (start !== -1 && end !== -1 && end > start) {
+          jsonStr = jsonStr.slice(start, end + 1);
+        }
+      }
+
       let parsed: { documentType: string; confidence: number; fields: Record<string, string> };
       try {
-        parsed = JSON.parse(content);
+        parsed = JSON.parse(jsonStr);
       } catch {
-        throw new Error(`Failed to parse LLM response as JSON: ${content}`);
+        console.error("[classify] Failed to parse LLM response:", content.slice(0, 500));
+        throw new Error(`Failed to parse LLM response as JSON: ${content.slice(0, 200)}`);
       }
 
       const label = parsed.documentType || "Unknown";
