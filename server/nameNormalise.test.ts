@@ -7,7 +7,6 @@ import { normaliseNameOrder, applyTemplate } from "../client/src/lib/aiProcessor
 // ─── normaliseNameOrder ────────────────────────────────────────────────────────
 
 describe("normaliseNameOrder", () => {
-  // Pattern 1: comma-separated "Surname, Firstname"
   it("converts 'Smith, John' to 'John Smith'", () => {
     expect(normaliseNameOrder("Smith, John")).toBe("John Smith");
   });
@@ -24,7 +23,6 @@ describe("normaliseNameOrder", () => {
     expect(normaliseNameOrder("Johnson, Michael Robert")).toBe("Michael Robert Johnson");
   });
 
-  // Pattern 2: all-caps first token "SURNAME Firstname" (3+ chars only)
   it("converts 'SMITH John' to 'John Smith'", () => {
     expect(normaliseNameOrder("SMITH John")).toBe("John Smith");
   });
@@ -33,7 +31,7 @@ describe("normaliseNameOrder", () => {
     expect(normaliseNameOrder("TAYLOR Jessica Anne")).toBe("Jessica Anne Taylor");
   });
 
-  // Critical fix: single-letter initial must NOT be treated as a surname
+  // Critical: single-letter initial must NOT be treated as a surname
   it("does NOT swap 'John J Kennedy' — J is a middle initial, not a surname", () => {
     expect(normaliseNameOrder("John J Kennedy")).toBe("John J Kennedy");
   });
@@ -42,7 +40,6 @@ describe("normaliseNameOrder", () => {
     expect(normaliseNameOrder("Sarah J Williams")).toBe("Sarah J Williams");
   });
 
-  // Pattern 3: already correct "Firstname Surname"
   it("leaves 'John Smith' unchanged", () => {
     expect(normaliseNameOrder("John Smith")).toBe("John Smith");
   });
@@ -70,62 +67,59 @@ describe("normaliseNameOrder", () => {
 
 // ─── applyTemplate separator logic ────────────────────────────────────────────
 
-describe("applyTemplate separator", () => {
-  const defaultArgs = {
-    separator: "-",
+describe("applyTemplate separator — spaced hyphen", () => {
+  const sep = " - ";
+  const args = (separator = sep) => ({
+    separator,
     nameFormat: "first-middle-last",
-    dateOrder: "DD-MM-YYYY",
-    dateSeparator: "-",
-  };
-
-  it("puts hyphen between segments but NOT within a multi-word name", () => {
-    const result = applyTemplate(
-      "Drivers Licence {name} {date}",
-      { name: "John Smith", date: "06-07-2028" },
-      defaultArgs.separator,
-      defaultArgs.nameFormat,
-      defaultArgs.dateOrder,
-      defaultArgs.dateSeparator
-    );
-    // Expected: "Drivers-Licence-John Smith-06-07-2028"
-    expect(result).toBe("Drivers-Licence-John Smith-06-07-2028");
+    dateOrder: "YYYY-MM-DD",
+    dateSeparator: "none",
   });
 
-  it("puts hyphen between segments but NOT within a three-word name", () => {
+  it("puts ' - ' between segments but preserves spaces within 'Drivers License'", () => {
     const result = applyTemplate(
-      "Payslip {name} {date}",
-      { name: "John Michael Smith", date: "31-01-2025" },
-      defaultArgs.separator,
-      defaultArgs.nameFormat,
-      defaultArgs.dateOrder,
-      defaultArgs.dateSeparator
+      "Drivers License {name} {expiryDate}",
+      { name: "John Joseph Kennedy", expiryDate: "20321231" },
+      args().separator, args().nameFormat, args().dateOrder, args().dateSeparator
     );
-    expect(result).toBe("Payslip-John Michael Smith-31-01-2025");
+    expect(result).toBe("Drivers License - John Joseph Kennedy - 20321231");
   });
 
-  it("collapses double separators when a variable is missing", () => {
+  it("puts ' - ' between segments but preserves spaces within 'Notice of Assessment'", () => {
+    const result = applyTemplate(
+      "Notice of Assessment {name} {financialYear}",
+      { name: "John J Kennedy", financialYear: "2024-25" },
+      args().separator, args().nameFormat, args().dateOrder, args().dateSeparator
+    );
+    expect(result).toBe("Notice of Assessment - John J Kennedy - 2024-25");
+  });
+
+  it("handles missing variable without double separator", () => {
     const result = applyTemplate(
       "Notice of Assessment {name} {financialYear}",
       { name: "John J Kennedy" },
-      defaultArgs.separator,
-      defaultArgs.nameFormat,
-      defaultArgs.dateOrder,
-      defaultArgs.dateSeparator
+      args().separator, args().nameFormat, args().dateOrder, args().dateSeparator
     );
-    // financialYear is missing, so no double separator should appear
-    expect(result).not.toContain("--");
-    expect(result).toBe("Notice-of-Assessment-John J Kennedy");
+    expect(result).not.toContain(" -  - ");
+    expect(result).toBe("Notice of Assessment - John J Kennedy");
   });
 
-  it("works correctly with space separator (no change to values)", () => {
+  it("plain hyphen separator also preserves spaces within literal text", () => {
     const result = applyTemplate(
-      "Payslip {name} {date}",
-      { name: "John Smith", date: "31-01-2025" },
-      " ",
-      defaultArgs.nameFormat,
-      defaultArgs.dateOrder,
-      defaultArgs.dateSeparator
+      "Drivers License {name} {expiryDate}",
+      { name: "John Smith", expiryDate: "20280706" },
+      "-", "first-middle-last", "YYYY-MM-DD", "none"
     );
-    expect(result).toBe("Payslip John Smith 31-01-2025");
+    // Literal text spaces are now preserved with all separators — separator only goes between segments
+    expect(result).toBe("Drivers License-John Smith-20280706");
+  });
+
+  it("Medicare Card with spaced hyphen preserves name spaces", () => {
+    const result = applyTemplate(
+      "Medicare Card {name} {expiryDate}",
+      { name: "Natalia Siwek", expiryDate: "20290531" },
+      args().separator, args().nameFormat, args().dateOrder, args().dateSeparator
+    );
+    expect(result).toBe("Medicare Card - Natalia Siwek - 20290531");
   });
 });

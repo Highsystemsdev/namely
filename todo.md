@@ -48,3 +48,8 @@
 - [ ] True PDF TFN redaction using pdf-lib (currently text-only)
 - [ ] ZIP file unpacking (process individual files inside uploaded ZIPs)
 - [ ] Batch processing progress indicator
+
+## Completed Fixes (Round 3)
+- [x] Fix: separator now only inserted at segment boundaries — literal text like "Drivers License" and "Notice of Assessment" preserves internal spaces
+- [x] Add: spaced hyphen ' - ' as a separator option (now the default)
+- [x] Update: defaults changed to spaced hyphen, YYYY-MM-DD date order, no date separator, First Middle Last name format

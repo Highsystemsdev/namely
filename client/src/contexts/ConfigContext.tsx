@@ -42,9 +42,9 @@ const defaultLenderNames = Object.fromEntries(
 );
 
 const defaultConfig: Config = {
-  separator: " ",
-  dateOrder: "DD-MM-YYYY",
-  dateSeparator: "-", // 'none' = no separator, '-' = hyphen, etc.
+  separator: " - ",
+  dateOrder: "YYYY-MM-DD",
+  dateSeparator: "none",
   nameFormat: "first-middle-last",
   convertImagesToPdf: true,
   redactTaxFileNumber: false,

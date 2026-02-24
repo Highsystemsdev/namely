@@ -165,26 +165,24 @@ export function applyTemplate(
   dateOrder: string,
   dateSeparator: string
 ): string {
-  // Step 1: Apply the separator to the TEMPLATE structure before substitution.
-  // This ensures the separator only appears between {variable} tokens, never
-  // within the resolved values (e.g. "John Smith" stays "John Smith", not "John-Smith").
-  // We replace spaces that sit between template tokens (literal text and {variables}).
+  // Step 1: Apply the separator at SEGMENT BOUNDARIES only.
+  // A segment is either a {variable} token or a run of literal text words.
+  // The separator goes between segments, NOT within a multi-word literal like
+  // "Drivers License" or "Notice of Assessment".
+  //
+  // Strategy:
+  //   1. Split the template into alternating [literal, {var}, literal, {var}, ...] parts.
+  //   2. Treat each contiguous literal block as ONE segment (preserve internal spaces).
+  //   3. Join all segments with the separator.
+  //   4. Trim any leading/trailing separator that results from empty literals.
   let workTemplate = template;
-  if (separator !== " ") {
-    // Replace spaces between template tokens with the separator.
-    // A "template space" is a space that is NOT inside a {variable} placeholder.
-    // We do this by splitting on {variable} tokens, joining with separator, then
-    // replacing spaces within each literal segment with the separator too.
-    workTemplate = workTemplate
-      .split(/(\{[^}]+\})/g)  // split on {variable} tokens, keeping them
-      .map(part => {
-        if (part.startsWith("{") && part.endsWith("}")) {
-          return part; // keep variable placeholder unchanged
-        }
-        // Replace spaces in literal text segments with the separator
-        return part.replace(/ /g, separator);
-      })
-      .join("");
+  {
+    const parts = workTemplate.split(/(\{[^}]+\})/g); // keeps {var} tokens
+    // Merge consecutive literal parts (shouldn't happen but be safe)
+    // Each part is either a literal string or a {variable}.
+    // We want: separator between each non-empty part.
+    const segments = parts.map(p => p.trim()).filter(p => p.length > 0);
+    workTemplate = segments.join(separator);
   }
 
   let result = workTemplate;
@@ -216,13 +214,16 @@ export function applyTemplate(
   }
 
   // Step 5: Remove any unresolved variables and clean up double-separators
-  result = result.replace(/\{[^}]+\}/g, "").trim();
-  if (separator !== " ") {
+  result = result.replace(/\{[^}]+\}/g, "");
+  {
     const escapedSep = separator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     // Collapse multiple consecutive separators into one (from removed variables)
-    result = result.replace(new RegExp(`${escapedSep}{2,}`, "g"), separator);
-    // Strip leading/trailing separators
-    result = result.replace(new RegExp(`^${escapedSep}+|${escapedSep}+$`, "g"), "");
+    // e.g. " -  - " → " - " when a variable was empty
+    result = result.replace(new RegExp(`(${escapedSep}){2,}`, "g"), separator);
+    // Strip leading/trailing separators (do this BEFORE trim so partial separators are caught)
+    result = result.replace(new RegExp(`^(${escapedSep})+|(${escapedSep})+$`, "g"), "");
+    // Also strip any partial separator remnants at the edges (e.g. trailing " -" or "- ")
+    result = result.replace(/^[\s\-_.]+|[\s\-_.]+$/g, "").trim();
   }
 
   // Step 6: Sanitize filename characters

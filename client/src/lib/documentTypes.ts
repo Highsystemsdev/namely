@@ -584,10 +584,11 @@ export const LENDER_CATEGORY_GROUPS = [
 
 // Separator options
 export const SEPARATOR_OPTIONS = [
-  { value: " ", label: "Space ( )" },
-  { value: "_", label: "Underscore (_)" },
+  { value: " - ", label: "Spaced Hyphen ( - )" },
   { value: "-", label: "Hyphen (-)" },
+  { value: "_", label: "Underscore (_)" },
   { value: ".", label: "Period (.)" },
+  { value: " ", label: "Space ( )" },
 ];
 
 // Date order options (the arrangement of day/month/year parts)
