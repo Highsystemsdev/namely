@@ -95,18 +95,30 @@ async function renameSingleFile(
     return { id: doc.id, status: "skipped", message: "Name unchanged", finalName: originalName };
   }
 
-  // Individual file mode: no directory handle — trigger a browser download instead
+  // Individual file mode (picked via showOpenFilePicker — no parent directory handle).
+  // Use FileSystemFileHandle.move(newName) for in-place rename.
+  // This is supported in Chrome/Edge 121+ and Firefox 111+.
   if (folderFile.isIndividualFile || !folderFile.parentHandle) {
+    if (!folderFile.handle) {
+      return { id: doc.id, status: "error", message: "No file handle available for in-place rename." };
+    }
     try {
-      const bytes = await folderFile.file.arrayBuffer();
-      const blob = new Blob([bytes], { type: folderFile.file.type || "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = window.document.createElement("a");
-      a.href = url;
-      a.download = desired;
-      a.click();
-      URL.revokeObjectURL(url);
-      return { id: doc.id, status: "success", finalName: desired };
+      // FileSystemFileHandle.move() renames the file atomically in-place.
+      const handle = folderFile.handle as FileSystemFileHandle & {
+        move?: (name: string) => Promise<void>;
+      };
+      if (typeof handle.move === "function") {
+        await handle.move(desired);
+        return { id: doc.id, status: "success", finalName: desired };
+      }
+      // Fallback: copy-verify-delete using the writable stream on the same handle.
+      // This overwrites the file content but cannot change the filename — so we
+      // inform the user that the browser doesn't support atomic rename.
+      return {
+        id: doc.id,
+        status: "error",
+        message: "Your browser does not support in-place file rename for individually picked files. Please use Pick Folder instead, or try Chrome/Edge.",
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { id: doc.id, status: "error", message };

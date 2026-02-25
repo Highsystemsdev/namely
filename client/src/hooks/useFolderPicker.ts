@@ -42,6 +42,10 @@ const ACCEPTED_EXTENSIONS = new Set([
 export const isFolderPickerSupported: boolean =
   typeof window !== "undefined" && "showDirectoryPicker" in window;
 
+/** True when the browser supports showOpenFilePicker (needed for in-place single-file rename) */
+export const isFilePickerSupported: boolean =
+  typeof window !== "undefined" && "showOpenFilePicker" in window;
+
 /**
  * True when the page is running inside a cross-origin iframe.
  * showDirectoryPicker is blocked in this context by browsers.
@@ -93,6 +97,69 @@ async function walkDirectory(
       }
     }
   }
+}
+
+/**
+ * Open a file picker (multiple files) and return them as FolderFile objects
+ * with writable handles, enabling true in-place rename identical to pickFolder.
+ * Returns null if the user cancels or if the browser does not support the API.
+ */
+export async function pickFiles(): Promise<FolderFile[] | null> {
+  if (!isFilePickerSupported) return null;
+
+  // Build accept types from ACCEPTED_EXTENSIONS
+  const acceptTypes = [
+    {
+      description: "Supported documents",
+      accept: {
+        "application/pdf": [".pdf"],
+        "image/*": [".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp"],
+        "application/vnd.ms-excel": [".xls", ".xlt"],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+        "application/vnd.ms-excel.sheet.macroEnabled.12": [".xlsm"],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.template": [".xltx"],
+        "application/vnd.ms-excel.template.macroEnabled.12": [".xltm"],
+      },
+    },
+  ];
+
+  let fileHandles: FileSystemFileHandle[];
+  try {
+    fileHandles = await (window as Window & typeof globalThis & {
+      showOpenFilePicker: (opts?: object) => Promise<FileSystemFileHandle[]>;
+    }).showOpenFilePicker({
+      multiple: true,
+      types: acceptTypes,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") return null;
+    throw err;
+  }
+
+  const results: FolderFile[] = [];
+  for (const handle of fileHandles) {
+    const file = await handle.getFile();
+    // For individually picked files we don't have a parent directory handle.
+    // folderRenamer handles this by creating the new file via handle.createWritable()
+    // on the same handle — but FileSystemFileHandle doesn't support rename directly.
+    // Instead we store the handle as both handle and a sentinel parentHandle=null,
+    // and folderRenamer's write-verify-delete path uses handle.createWritable() to
+    // overwrite the file with the new content, then uses the parent directory
+    // obtained via requestPermission on the handle's parent.
+    //
+    // Simpler approach: store the handle; folderRenamer will use
+    // handle.move(newName) when available, otherwise write+delete via parent.
+    // Since we don't have the parent handle from showOpenFilePicker, we set
+    // parentHandle to a special symbol so folderRenamer knows to use handle.move().
+    results.push({
+      file,
+      handle,
+      parentHandle: null, // signal to use handle.move() path
+      relativePath: file.name,
+      isIndividualFile: true,
+    });
+  }
+  return results;
 }
 
 /**

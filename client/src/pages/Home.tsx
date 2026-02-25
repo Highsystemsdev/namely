@@ -34,7 +34,7 @@ import {
 import { processDocument, applyTemplate, type ProcessedDocument } from "@/lib/aiProcessor";
 import { DOCUMENT_TYPES } from "@/lib/documentTypes";
 import { useConfig } from "@/contexts/ConfigContext";
-import { isFolderPickerSupported, isInsideCrossOriginIframe, pickFolder } from "@/hooks/useFolderPicker";
+import { isFolderPickerSupported, isFilePickerSupported, isInsideCrossOriginIframe, pickFolder, pickFiles } from "@/hooks/useFolderPicker";
 import { applyFolderRenames } from "@/lib/folderRenamer";
 
 const ACCEPTED_TYPES = [
@@ -117,7 +117,6 @@ export default function Home() {
   const [isApplyingRenames, setIsApplyingRenames] = useState(false);
   const [applyResults, setApplyResults] = useState<ApplyResult[]>([]);
   const [isIndividualMode, setIsIndividualMode] = useState(false);
-  const pickFilesInputRef = useRef<HTMLInputElement>(null);
 
   const processingCount = documents.filter(d => d.status === "processing").length;
   const doneCount = documents.filter(d => d.status === "done").length;
@@ -432,77 +431,73 @@ export default function Home() {
     setIsIndividualMode(false);
   }
 
-  async function handlePickIndividualFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    const fileArray = Array.from(files);
-
-    // Filter to supported types
-    const validFiles = fileArray.filter(f => {
-      const ext = "." + f.name.split(".").pop()?.toLowerCase();
-      return ACCEPTED_EXTENSIONS.includes(ext) || ACCEPTED_TYPES.includes(f.type);
-    });
-
-    if (validFiles.length === 0) {
-      toast.error("No supported files selected.");
+  async function handlePickFiles() {
+    if (!isFilePickerSupported) {
+      toast.error("File picker is not supported in this browser. Please use Chrome, Edge, or Firefox.");
       return;
     }
-
     setIsFolderLoading(true);
-    toast.info(`Processing ${validFiles.length} file${validFiles.length !== 1 ? "s" : ""}. Analysing with AI…`);
-
-    const items: FolderRenameItem[] = [];
-
-    for (const file of validFiles) {
-      // Wrap in a FolderFile with null handles — Apply will download instead of rename in-place
-      const folderFile = {
-        file,
-        handle: null,
-        parentHandle: null,
-        relativePath: file.name,
-        isIndividualFile: true,
-      };
-
-      try {
-        const doc = await processDocument(
-          file,
-          config.templates,
-          config.separator,
-          config.nameFormat,
-          config.dateOrder,
-          config.dateSeparator,
-          config.lenderNames
-        );
-        items.push({ folderFile, doc, approved: true });
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        const errorDoc: ProcessedDocument = {
-          id: Math.random().toString(36).slice(2),
-          originalName: file.name,
-          fileSize: file.size,
-          fileType: file.type || "application/octet-stream",
-          documentTypeId: "",
-          documentTypeLabel: "Error",
-          confidence: 0,
-          extractedData: {},
-          proposedName: file.name,
-          customName: null,
-          status: "error",
-          errorMessage: errMsg,
-          missingFields: [],
-          file,
-        };
-        items.push({ folderFile, doc: errorDoc, approved: false });
+    try {
+      const pickedFiles = await pickFiles();
+      if (!pickedFiles) {
+        // User cancelled
+        setIsFolderLoading(false);
+        return;
       }
+      if (pickedFiles.length === 0) {
+        toast.info("No supported files selected.");
+        setIsFolderLoading(false);
+        return;
+      }
+
+      toast.info(`Processing ${pickedFiles.length} file${pickedFiles.length !== 1 ? "s" : ""}. Analysing with AI…`);
+
+      const items: FolderRenameItem[] = [];
+
+      for (const folderFile of pickedFiles) {
+        try {
+          const doc = await processDocument(
+            folderFile.file,
+            config.templates,
+            config.separator,
+            config.nameFormat,
+            config.dateOrder,
+            config.dateSeparator,
+            config.lenderNames
+          );
+          items.push({ folderFile, doc, approved: true });
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          const errorDoc: ProcessedDocument = {
+            id: Math.random().toString(36).slice(2),
+            originalName: folderFile.file.name,
+            fileSize: folderFile.file.size,
+            fileType: folderFile.file.type || "application/octet-stream",
+            documentTypeId: "",
+            documentTypeLabel: "Error",
+            confidence: 0,
+            extractedData: {},
+            proposedName: folderFile.file.name,
+            customName: null,
+            status: "error",
+            errorMessage: errMsg,
+            missingFields: [],
+            file: folderFile.file,
+          };
+          items.push({ folderFile, doc: errorDoc, approved: false });
+        }
+      }
+
+      setIsIndividualMode(true);
+      setFolderItems(items);
+      setApplyResults([]);
+      setFolderPreviewOpen(true);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to pick files: ${msg}`);
+    } finally {
+      setIsFolderLoading(false);
     }
-
-    setIsIndividualMode(true);
-    setFolderItems(items);
-    setApplyResults([]);
-    setFolderPreviewOpen(true);
-    setIsFolderLoading(false);
-
-    // Reset the input so the same files can be picked again
-    if (pickFilesInputRef.current) pickFilesInputRef.current.value = "";
   }
 
   return (
@@ -629,7 +624,7 @@ export default function Home() {
               <div className="flex items-center gap-2 text-sm font-medium mb-1 flex-wrap justify-center">
                 <button
                   className="text-primary hover:underline font-semibold flex items-center gap-1"
-                  onClick={() => pickFilesInputRef.current?.click()}
+                  onClick={() => handlePickFiles()}
                   disabled={isFolderLoading}
                 >
                   {isFolderLoading ? (
@@ -639,7 +634,7 @@ export default function Home() {
                   )}
                   Pick files
                 </button>
-                {(isFolderPickerSupported && !isInsideCrossOriginIframe) && (
+                {(isFolderPickerSupported && !isInsideCrossOriginIframe) && isFilePickerSupported && (
                   <>
                     <span className="text-muted-foreground">or</span>
                     <button
@@ -661,9 +656,9 @@ export default function Home() {
               <p className="text-xs text-muted-foreground">
                 Supports PDF, PNG, JPG, HEIC, HEIF, WEBP, XLS, XLSX, XLSM, XLT, XLTX, XLTM (Max 50MB per file)
               </p>
-              {!isFolderPickerSupported && (
+              {(!isFolderPickerSupported || !isFilePickerSupported) && (
                 <p className="text-xs text-amber-600 mt-1">
-                  Folder mode requires Chrome, Edge, or Firefox. Safari is not supported.
+                  In-place rename requires Chrome, Edge, or Firefox. Safari is not supported.
                 </p>
               )}
               {isFolderPickerSupported && isInsideCrossOriginIframe && (
@@ -682,7 +677,7 @@ export default function Home() {
               )}
             </div>
 
-            {/* Hidden inputs */}
+            {/* Hidden input for drag-and-drop upload zone */}
             <input
               ref={fileInputRef}
               type="file"
@@ -690,14 +685,6 @@ export default function Home() {
               accept={ACCEPTED_EXTENSIONS.join(",")}
               className="hidden"
               onChange={e => e.target.files && handleFiles(e.target.files)}
-            />
-            <input
-              ref={pickFilesInputRef}
-              type="file"
-              multiple
-              accept={ACCEPTED_EXTENSIONS.join(",")}
-              className="hidden"
-              onChange={e => handlePickIndividualFiles(e.target.files)}
             />
           </div>
 

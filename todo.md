@@ -107,3 +107,7 @@
 
 ## Bug Fixes (Round 14)
 - [x] Fix: Pick Folder incorrectly sets isIndividualMode=true causing download instead of in-place rename
+
+## New Features (Round 15)
+- [x] Pick Files: replaced hidden file input with showOpenFilePicker (File System Access API) so selected files get writable handles and rename in-place using handle.move()
+- [x] Safari fallback: if showOpenFilePicker is unsupported, error toast shown directing user to Chrome/Edge/Firefox
