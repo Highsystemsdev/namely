@@ -373,8 +373,8 @@ export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
   {
     id: "serviceability-calc",
     label: "Serviceability Calc",
-    defaultTemplate: "Serviceability Calc {name} {date}",
-    variables: [nameVar, dateVar],
+    defaultTemplate: "Serviceability Calc {name} {lender} {date}",
+    variables: [nameVar, lenderVar, dateVar],
   },
   {
     id: "settlement-letter",

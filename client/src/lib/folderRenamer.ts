@@ -95,6 +95,24 @@ async function renameSingleFile(
     return { id: doc.id, status: "skipped", message: "Name unchanged", finalName: originalName };
   }
 
+  // Individual file mode: no directory handle — trigger a browser download instead
+  if (folderFile.isIndividualFile || !folderFile.parentHandle) {
+    try {
+      const bytes = await folderFile.file.arrayBuffer();
+      const blob = new Blob([bytes], { type: folderFile.file.type || "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const a = window.document.createElement("a");
+      a.href = url;
+      a.download = desired;
+      a.click();
+      URL.revokeObjectURL(url);
+      return { id: doc.id, status: "success", finalName: desired };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { id: doc.id, status: "error", message };
+    }
+  }
+
   const dirHandle = folderFile.parentHandle;
 
   try {

@@ -97,3 +97,7 @@
 - [x] Preserve original Excel extension on rename (no conversion)
 - [x] Spreadsheet icon (📊) shown for Excel files in the document list
 - [x] 18 new vitest tests for Excel extractor (67 total passing)
+
+## New Features (Round 12)
+- [x] Add {lender} tag to Serviceability Calc document type template and variables
+- [x] Add "Pick files" button alongside "Open folder" — uses standard file input, feeds selected files into the folder rename preview pipeline (downloads renamed files, works in all browsers including Safari)

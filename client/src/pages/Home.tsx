@@ -116,6 +116,8 @@ export default function Home() {
   const [folderPreviewOpen, setFolderPreviewOpen] = useState(false);
   const [isApplyingRenames, setIsApplyingRenames] = useState(false);
   const [applyResults, setApplyResults] = useState<ApplyResult[]>([]);
+  const [isIndividualMode, setIsIndividualMode] = useState(false);
+  const pickFilesInputRef = useRef<HTMLInputElement>(null);
 
   const processingCount = documents.filter(d => d.status === "processing").length;
   const doneCount = documents.filter(d => d.status === "done").length;
@@ -426,6 +428,80 @@ export default function Home() {
     setFolderPreviewOpen(false);
     setFolderItems([]);
     setApplyResults([]);
+    setIsIndividualMode(false);
+  }
+
+  async function handlePickIndividualFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const fileArray = Array.from(files);
+
+    // Filter to supported types
+    const validFiles = fileArray.filter(f => {
+      const ext = "." + f.name.split(".").pop()?.toLowerCase();
+      return ACCEPTED_EXTENSIONS.includes(ext) || ACCEPTED_TYPES.includes(f.type);
+    });
+
+    if (validFiles.length === 0) {
+      toast.error("No supported files selected.");
+      return;
+    }
+
+    setIsFolderLoading(true);
+    toast.info(`Processing ${validFiles.length} file${validFiles.length !== 1 ? "s" : ""}. Analysing with AI…`);
+
+    const items: FolderRenameItem[] = [];
+
+    for (const file of validFiles) {
+      // Wrap in a FolderFile with null handles — Apply will download instead of rename in-place
+      const folderFile = {
+        file,
+        handle: null,
+        parentHandle: null,
+        relativePath: file.name,
+        isIndividualFile: true,
+      };
+
+      try {
+        const doc = await processDocument(
+          file,
+          config.templates,
+          config.separator,
+          config.nameFormat,
+          config.dateOrder,
+          config.dateSeparator,
+          config.lenderNames
+        );
+        items.push({ folderFile, doc, approved: true });
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        const errorDoc: ProcessedDocument = {
+          id: Math.random().toString(36).slice(2),
+          originalName: file.name,
+          fileSize: file.size,
+          fileType: file.type || "application/octet-stream",
+          documentTypeId: "",
+          documentTypeLabel: "Error",
+          confidence: 0,
+          extractedData: {},
+          proposedName: file.name,
+          customName: null,
+          status: "error",
+          errorMessage: errMsg,
+          missingFields: [],
+          file,
+        };
+        items.push({ folderFile, doc: errorDoc, approved: false });
+      }
+    }
+
+    setIsIndividualMode(true);
+    setFolderItems(items);
+    setApplyResults([]);
+    setFolderPreviewOpen(true);
+    setIsFolderLoading(false);
+
+    // Reset the input so the same files can be picked again
+    if (pickFilesInputRef.current) pickFilesInputRef.current.value = "";
   }
 
   return (
@@ -523,6 +599,19 @@ export default function Home() {
                   + Upload files
                 </button>
                 <span className="text-muted-foreground">or drop files here</span>
+                <span className="text-muted-foreground">·</span>
+                <button
+                  className="text-primary hover:underline font-semibold flex items-center gap-1"
+                  onClick={e => { e.stopPropagation(); pickFilesInputRef.current?.click(); }}
+                  disabled={isFolderLoading}
+                >
+                  {isFolderLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <FileText className="h-3.5 w-3.5" />
+                  )}
+                  Pick files
+                </button>
                 {isFolderPickerSupported && !isInsideCrossOriginIframe && (
                   <>
                     <span className="text-muted-foreground">·</span>
@@ -572,6 +661,15 @@ export default function Home() {
               accept={ACCEPTED_EXTENSIONS.join(",")}
               className="hidden"
               onChange={e => e.target.files && handleFiles(e.target.files)}
+            />
+            {/* Hidden input for individual file picking — feeds into the rename preview pipeline */}
+            <input
+              ref={pickFilesInputRef}
+              type="file"
+              multiple
+              accept={ACCEPTED_EXTENSIONS.join(",")}
+              className="hidden"
+              onChange={e => handlePickIndividualFiles(e.target.files)}
             />
           </div>
 
@@ -630,6 +728,7 @@ export default function Home() {
         onApplyRenames={handleApplyRenames}
         onNameChange={handleFolderNameChange}
         onClose={handleFolderPreviewClose}
+        isIndividualMode={isIndividualMode}
       />
     </div>
   );

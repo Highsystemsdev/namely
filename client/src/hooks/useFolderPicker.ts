@@ -11,12 +11,24 @@
 export interface FolderFile {
   /** The File blob — can be fed directly into processDocument */
   file: File;
-  /** The FileSystemFileHandle for writing the renamed file back to disk */
-  handle: FileSystemFileHandle;
-  /** The parent FileSystemDirectoryHandle — needed to create the new file and delete the old one */
-  parentHandle: FileSystemDirectoryHandle;
+  /**
+   * The FileSystemFileHandle for writing the renamed file back to disk.
+   * Null when the file was picked individually (no folder context) — in that
+   * case the rename is applied as a browser download instead of an in-place write.
+   */
+  handle: FileSystemFileHandle | null;
+  /**
+   * The parent FileSystemDirectoryHandle — needed to create the new file and
+   * delete the old one. Null for individually-picked files.
+   */
+  parentHandle: FileSystemDirectoryHandle | null;
   /** Relative path from the root folder, e.g. "subdir/document.pdf" */
   relativePath: string;
+  /**
+   * True when this file was picked individually (not from a folder).
+   * In this mode, Apply triggers a download rather than an in-place rename.
+   */
+  isIndividualFile?: boolean;
 }
 
 const ACCEPTED_EXTENSIONS = new Set([
