@@ -95,8 +95,19 @@ export function FolderRenamePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v && !isApplying) onClose(); }}>
-      {/* Wide dialog so filenames have room to breathe */}
-      <DialogContent className="w-[95vw] max-w-5xl max-h-[85vh] flex flex-col gap-0 p-0">
+      {/* 80vw wide by default, user-resizable in both axes */}
+      <DialogContent
+        className="flex flex-col gap-0 p-0 overflow-hidden"
+        style={{
+          width: "80vw",
+          maxWidth: "none",
+          height: "80vh",
+          maxHeight: "none",
+          resize: "both",
+          minWidth: "480px",
+          minHeight: "320px",
+        }}
+      >
         <DialogHeader className="px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <FolderOpen className="h-5 w-5 text-primary" />

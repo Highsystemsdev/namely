@@ -73,3 +73,6 @@
 ## Bug Fixes (Round 7)
 - [x] Fix: preserve original file extension instead of forcing .pdf (jpeg stays jpeg, pdf stays pdf)
 - [x] Fix: long filenames truncated in rename preview table — both tables now use break-all wrapping and horizontal scroll
+
+## UX Improvements (Round 8)
+- [x] FolderRenamePreviewDialog: default width 80vw, user-resizable in both dimensions
