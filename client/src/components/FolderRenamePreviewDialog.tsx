@@ -217,9 +217,7 @@ export function FolderRenamePreviewDialog({
           <div className="flex items-center gap-2">
             <FolderOpen className="h-5 w-5 text-primary" />
             <DialogTitle className="text-base">
-              {isDone
-                ? (isIndividualMode ? "Download Complete" : "Rename Complete")
-                : "Review Proposed Renames"}
+              {isDone ? "Rename Complete" : "Review Proposed Renames"}
             </DialogTitle>
           </div>
           {!isDone && (
@@ -231,9 +229,7 @@ export function FolderRenamePreviewDialog({
                 </span>
               )}
               Uncheck rows to skip, or click a new name to edit it before applying.
-              {isIndividualMode && (
-                <span className="text-muted-foreground"> Files will be downloaded with their new names.</span>
-              )}
+
             </p>
           )}
           {isDone && (
@@ -398,9 +394,7 @@ export function FolderRenamePreviewDialog({
                   ) : (
                     <>
                       <ChevronRight className="h-3.5 w-3.5" />
-                      {isIndividualMode
-                        ? `Download ${approvedCount} file${approvedCount !== 1 ? "s" : ""}`
-                        : `Apply ${approvedCount} rename${approvedCount !== 1 ? "s" : ""}`}
+                      {`Rename ${approvedCount} file${approvedCount !== 1 ? "s" : ""}`}
                     </>
                   )}
                 </Button>

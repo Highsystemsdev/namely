@@ -111,3 +111,6 @@
 ## New Features (Round 15)
 - [x] Pick Files: replaced hidden file input with showOpenFilePicker (File System Access API) so selected files get writable handles and rename in-place using handle.move()
 - [x] Safari fallback: if showOpenFilePicker is unsupported, error toast shown directing user to Chrome/Edge/Firefox
+
+## Bug Fixes (Round 16)
+- [x] Fix: FolderRenamePreviewDialog Apply button shows "Download" for Pick Files — now always says "Rename X file(s)" since both modes rename in-place
