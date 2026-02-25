@@ -19,7 +19,11 @@ export interface FolderFile {
   relativePath: string;
 }
 
-const ACCEPTED_EXTENSIONS = new Set([".pdf", ".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp"]);
+const ACCEPTED_EXTENSIONS = new Set([
+  ".pdf", ".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp",
+  // Excel formats
+  ".xls", ".xlsx", ".xlsm", ".xlt", ".xltx", ".xltm",
+]);
 // ZIP files are excluded from folder mode — user is asked to extract them first.
 
 /** True when the browser supports showDirectoryPicker with readwrite mode */

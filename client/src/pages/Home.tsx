@@ -37,14 +37,39 @@ import { useConfig } from "@/contexts/ConfigContext";
 import { isFolderPickerSupported, isInsideCrossOriginIframe, pickFolder } from "@/hooks/useFolderPicker";
 import { applyFolderRenames } from "@/lib/folderRenamer";
 
-const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/heic", "image/heif", "image/webp", "application/zip"];
-const ACCEPTED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp", ".zip"];
+const ACCEPTED_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/heic",
+  "image/heif",
+  "image/webp",
+  "application/zip",
+  // Excel formats
+  "application/vnd.ms-excel",                                                    // .xls
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",           // .xlsx
+  "application/vnd.ms-excel.sheet.macroEnabled.12",                              // .xlsm
+  "application/vnd.ms-excel.template",                                           // .xlt
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.template",        // .xltx
+  "application/vnd.ms-excel.template.macroEnabled.12",                           // .xltm
+];
+const ACCEPTED_EXTENSIONS = [
+  ".pdf", ".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp", ".zip",
+  ".xls", ".xlsx", ".xlsm", ".xlt", ".xltx", ".xltm",
+];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_ZIP_SIZE = 25 * 1024 * 1024; // 25MB
 
-function getFileIcon(fileType: string) {
+function getFileIcon(fileType: string, fileName?: string) {
   if (fileType.startsWith("image/")) return "🖼";
   if (fileType === "application/zip") return "📦";
+  const lowerName = (fileName || "").toLowerCase();
+  if (
+    lowerName.endsWith(".xls") || lowerName.endsWith(".xlsx") ||
+    lowerName.endsWith(".xlsm") || lowerName.endsWith(".xlt") ||
+    lowerName.endsWith(".xltx") || lowerName.endsWith(".xltm") ||
+    fileType.includes("spreadsheet") || fileType.includes("excel")
+  ) return "📊";
   return "📄";
 }
 
@@ -517,7 +542,7 @@ export default function Home() {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Supports PDF, PNG, JPG, HEIC, HEIF, WEBP (Max 50MB per file)
+                Supports PDF, PNG, JPG, HEIC, HEIF, WEBP, XLS, XLSX, XLSM, XLT, XLTX, XLTM (Max 50MB per file)
               </p>
               {!isFolderPickerSupported && (
                 <p className="text-xs text-amber-600 mt-1">
@@ -641,7 +666,7 @@ function DocumentRow({
     return (
       <div className="grid grid-cols-[1fr_2fr_100px_80px] gap-3 px-4 py-3 items-center">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm">{getFileIcon(doc.fileType)}</span>
+          <span className="text-sm">{getFileIcon(doc.fileType, doc.originalName)}</span>
           <span className="text-xs text-muted-foreground truncate">{doc.originalName}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -679,7 +704,7 @@ function DocumentRow({
     )}>
       {/* Original name */}
       <div className="flex items-center gap-2 min-w-0">
-        <span className="text-sm flex-shrink-0">{getFileIcon(doc.fileType)}</span>
+        <span className="text-sm flex-shrink-0">{getFileIcon(doc.fileType, doc.originalName)}</span>
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="text-xs text-muted-foreground truncate cursor-default">{doc.originalName}</span>

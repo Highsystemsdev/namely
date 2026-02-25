@@ -88,3 +88,12 @@
 - [x] Missing-tag badges in folder preview dialog: amber "Missing: {field}" badge below document type
 - [x] Lender abbreviation matching: resolveLenderAbbreviation tries exact full-name, abbreviation, then word-boundary partial match; applied in processDocument before template substitution
 - [x] 12 new vitest tests for resolveLenderAbbreviation and computeMissingFields (49 total passing)
+
+## New Features (Round 11 - Excel Support)
+- [x] Install SheetJS (xlsx) for browser-side Excel parsing
+- [x] Excel text extractor: reads all sheets, extracts cell values as plain text for AI classification
+- [x] Accept .xls, .xlsx, .xlsm, .xlt, .xltx, .xltm in upload zone and folder mode
+- [x] Feed Excel text into existing AI classification pipeline (same as PDF text extraction)
+- [x] Preserve original Excel extension on rename (no conversion)
+- [x] Spreadsheet icon (📊) shown for Excel files in the document list
+- [x] 18 new vitest tests for Excel extractor (67 total passing)

@@ -9,6 +9,7 @@
  */
 
 import * as pdfjsLib from "pdfjs-dist";
+import { extractExcelText, isExcelFile } from "./excelExtractor";
 
 // Point the worker at the bundled worker file via Vite's ?url import trick
 // We use a CDN URL for the worker to avoid bundling issues with the large worker file
@@ -103,6 +104,12 @@ export async function extractDocumentContent(file: File): Promise<ExtractionResu
       const imageBase64 = await pdfPageToBase64(pdf);
       return { text, imageBase64, isImageMode: true };
     }
+  }
+
+  // --- Excel files (.xls, .xlsx, .xlsm, .xlt, .xltx, .xltm) ---
+  if (isExcelFile(file)) {
+    const { text } = await extractExcelText(file);
+    return { text, imageBase64: null, isImageMode: false };
   }
 
   // --- Fallback: treat as image ---
