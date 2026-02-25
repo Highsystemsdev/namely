@@ -4,7 +4,7 @@
  * Uses PDF.js for text extraction and Vision API for scanned/image documents.
  */
 
-import { DOCUMENT_TYPES, LENDERS, type DocumentTypeConfig } from "./documentTypes";
+import { DOCUMENT_TYPES, LENDERS, MASTER_TAGS, type DocumentTypeConfig } from "./documentTypes";
 import { extractDocumentContent } from "./documentExtractor";
 import { extractWithForge } from "./forgeExtractor";
 
@@ -433,6 +433,8 @@ export function resolveLenderAbbreviation(
 /**
  * Determine which template variables were required but not extracted.
  * Parses {variable} tokens from the template and checks extractedData.
+ * Label resolution checks the doc type's own variables first, then falls
+ * back to MASTER_TAGS so dynamically-added tags get proper human-readable names.
  */
 export function computeMissingFields(
   template: string,
@@ -447,9 +449,12 @@ export function computeMissingFields(
     const value = extractedData[key];
     return !value || value.trim() === "";
   }).map(key => {
-    // Use the human-readable label from the doc type variables if available
-    const varDef = docType.variables.find(v => v.key === key);
-    return varDef ? varDef.label : `{${key}}`;
+    // Check doc type's own variables first, then MASTER_TAGS, then fall back to raw key
+    const docVar = docType.variables.find(v => v.key === key);
+    if (docVar) return docVar.label;
+    const masterVar = MASTER_TAGS.find(v => v.key === key);
+    if (masterVar) return masterVar.label;
+    return `{${key}}`;
   });
 }
 

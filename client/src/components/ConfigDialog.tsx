@@ -3,9 +3,10 @@
  * Design: Swiss Grid Modernism — clean modal with tabs for Document Templates and Lender Names
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -13,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RotateCcw, ChevronDown, ChevronUp, Search, X, Save, CheckCircle2 } from "lucide-react";
+import { RotateCcw, ChevronDown, ChevronUp, Search, X, Save, CheckCircle2, Tag, ChevronRight } from "lucide-react";
 import { useConfig } from "@/contexts/ConfigContext";
 import {
   DOCUMENT_TYPES,
@@ -24,6 +25,7 @@ import {
   DATE_ORDER_OPTIONS,
   DATE_SEPARATOR_OPTIONS,
   NAME_FORMAT_OPTIONS,
+  MASTER_TAGS,
 } from "@/lib/documentTypes";
 import { applyTemplate } from "@/lib/aiProcessor";
 import { cn } from "@/lib/utils";
@@ -64,11 +66,15 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
           <TabsContent value="templates" className="flex-1 min-h-0 flex flex-col mt-0 overflow-hidden">
             <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="px-6 py-4 space-y-5">
-                {/* How it works */}
+                {/* How it works + tag reference */}
                 <div className="bg-muted/50 rounded-md p-3 text-xs text-muted-foreground space-y-1">
-                  <p className="font-medium text-foreground text-xs">How this works:</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-foreground text-xs">How this works:</p>
+                    <TagReferencePopover />
+                  </div>
                   <ul className="space-y-0.5 list-disc list-inside">
-                    <li>Use variables like <code className="bg-background px-1 rounded">{"{name}"}</code>, <code className="bg-background px-1 rounded">{"{date}"}</code>, <code className="bg-background px-1 rounded">{"{documentType}"}</code> in your templates</li>
+                    <li>Use variables like <code className="bg-background px-1 rounded">{"{name}"}</code>, <code className="bg-background px-1 rounded">{"{date}"}</code>, <code className="bg-background px-1 rounded">{"{lender}"}</code> in your templates</li>
+                    <li>Each document type shows its suggested tags — click <strong>All tags</strong> to see every available tag</li>
                     <li>Global settings (Separator, Date Format, Name Format) apply to all document types at once</li>
                     <li>You can reset individual document types or all templates to their defaults at any time</li>
                   </ul>
@@ -76,7 +82,7 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
 
                 {/* Global settings */}
                 <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Customise how files are named for each document type. Use variables like <code className="bg-muted px-1 rounded">{"{name}"}</code>, <code className="bg-muted px-1 rounded">{"{documentType}"}</code>, etc.</p>
+                  <p className="text-xs text-muted-foreground">Customise how files are named for each document type. Click a document type to expand and edit its template.</p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium">Separator</Label>
@@ -187,17 +193,103 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
   );
 }
 
+/** Popover showing all available tags with descriptions — linked from the info box */
+function TagReferencePopover() {
+  const [search, setSearch] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const filtered = MASTER_TAGS.filter(t =>
+    !search ||
+    t.key.toLowerCase().includes(search.toLowerCase()) ||
+    t.description.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function handleCopy(tag: string) {
+    navigator.clipboard.writeText(`{${tag}}`).catch(() => {});
+    setCopied(tag);
+    setTimeout(() => setCopied(null), 1500);
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
+          <Tag className="h-3 w-3" />
+          View all available tags
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-3 space-y-2" align="end">
+        <p className="text-xs font-semibold">All Available Tags</p>
+        <p className="text-xs text-muted-foreground">Click any tag to copy it, then paste into a template.</p>
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search tags..."
+            className="h-7 pl-6 text-xs"
+          />
+          {search && (
+            <button className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setSearch("")}>
+              <X className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+        <ScrollArea className="h-64">
+          <div className="space-y-1 pr-2">
+            {filtered.map(tag => (
+              <button
+                key={tag.key}
+                onClick={() => handleCopy(tag.key)}
+                className="w-full flex items-start gap-2 px-2 py-1.5 rounded hover:bg-muted/60 text-left transition-colors group"
+              >
+                <code className={cn(
+                  "text-xs font-mono px-1.5 py-0.5 rounded flex-shrink-0 transition-colors",
+                  copied === tag.key
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-muted text-primary group-hover:bg-primary/10"
+                )}>
+                  {`{${tag.key}}`}
+                </code>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground leading-tight">{tag.description}</p>
+                  <p className="text-xs text-muted-foreground/60 leading-tight">e.g. {tag.example}</p>
+                </div>
+                {copied === tag.key && (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                )}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">No tags match your search</p>
+            )}
+          </div>
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function DocumentTemplateRow({ docTypeId }: { docTypeId: string }) {
   const { config, updateTemplate, revertTemplate } = useConfig();
   const [expanded, setExpanded] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const docType = DOCUMENT_TYPES.find(d => d.id === docTypeId)!;
   const template = config.templates[docTypeId] || docType.defaultTemplate;
   const isCustomized = template !== docType.defaultTemplate;
 
+  // Tags already shown in the suggested section
+  const suggestedKeys = new Set(docType.variables.map(v => v.key));
+  // Additional tags from MASTER_TAGS not in the suggested list
+  const additionalTags = MASTER_TAGS.filter(t => !suggestedKeys.has(t.key));
+
   const previewName = applyTemplate(
     template,
-    Object.fromEntries(docType.variables.map(v => [v.key, v.example])),
+    Object.fromEntries([
+      ...docType.variables.map(v => [v.key, v.example]),
+      ...MASTER_TAGS.map(t => [t.key, t.example]),
+    ]),
     config.separator,
     config.nameFormat,
     config.dateOrder,
@@ -250,9 +342,10 @@ function DocumentTemplateRow({ docTypeId }: { docTypeId: string }) {
             />
           </div>
 
+          {/* Suggested tags */}
           <div className="space-y-1.5">
             <p className="text-xs text-muted-foreground">
-              Click a tag to insert at cursor position
+              <span className="font-medium">Suggested tags</span> — click to insert at cursor
             </p>
             <div className="flex flex-wrap gap-1.5">
               {docType.variables.map(v => (
@@ -266,6 +359,31 @@ function DocumentTemplateRow({ docTypeId }: { docTypeId: string }) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* All tags (collapsible) */}
+          <div className="space-y-1.5">
+            <button
+              className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+              onClick={() => setShowAllTags(s => !s)}
+            >
+              <ChevronRight className={cn("h-3 w-3 transition-transform", showAllTags && "rotate-90")} />
+              {showAllTags ? "Hide additional tags" : `All tags (${additionalTags.length} more)`}
+            </button>
+            {showAllTags && (
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {additionalTags.map(v => (
+                  <button
+                    key={v.key}
+                    className="var-chip opacity-80 hover:opacity-100"
+                    title={`${v.description} · e.g. ${v.example}`}
+                    onClick={() => insertVariable(v.key)}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">
@@ -346,61 +464,68 @@ function LenderNamesTab() {
                 )}
               >
                 {cat.label}
+                {customisedCount(cat.id) > 0 && (
+                  <span className="ml-1 text-primary">({customisedCount(cat.id)})</span>
+                )}
               </button>
             ))}
           </div>
 
-          <p className="text-xs text-muted-foreground">Showing {filteredLenders.length} institutions</p>
-
-          {/* Grouped lenders */}
-          <div className="space-y-1">
-            {groupedLenders.map(group => {
-              const isExpanded = expandedGroup === group.id;
-              const customised = group.lenders.filter(l => config.lenderNames[l.id] !== l.abbreviation).length;
-              return (
-                <div key={group.id} className="border border-border rounded-md overflow-hidden">
-                  <button
-                    className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-muted/40 transition-colors"
-                    onClick={() => setExpandedGroup(isExpanded ? null : group.id)}
-                  >
-                    <span className="text-sm font-medium">{group.label} ({group.lenders.length})</span>
-                    <div className="flex items-center gap-2">
-                      {customised > 0 && <span className="text-xs text-primary font-medium">{customised} customised</span>}
-                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-                    </div>
-                  </button>
-                  {isExpanded && (
-                    <div className="border-t border-border divide-y divide-border">
-                      {group.lenders.map(lender => {
-                        const currentName = config.lenderNames[lender.id] || lender.abbreviation;
-                        const isCustomised = currentName !== lender.abbreviation;
-                        return (
-                          <div key={lender.id} className="flex items-center px-3 py-2 gap-3 bg-muted/10">
-                            <span className="text-xs text-muted-foreground flex-1 min-w-0 truncate">{lender.fullName}</span>
-                            <div className="flex items-center gap-1.5">
-                              <Input
-                                value={currentName}
-                                onChange={e => updateLenderName(lender.id, e.target.value)}
-                                className="h-7 w-32 text-xs"
-                              />
-                              {isCustomised && (
-                                <button
-                                  onClick={() => resetLenderName(lender.id)}
-                                  className="text-muted-foreground hover:text-foreground transition-colors"
-                                  title="Reset to default"
-                                >
-                                  <RotateCcw className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                            </div>
+          {/* Lender groups */}
+          <div className="space-y-2">
+            {groupedLenders.map(group => (
+              <div key={group.id} className="border border-border rounded-md overflow-hidden">
+                <button
+                  className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-muted/40 transition-colors"
+                  onClick={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}
+                >
+                  <span className="text-xs font-medium">{group.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{group.lenders.length} institutions</span>
+                    {expandedGroup === group.id
+                      ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                      : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </div>
+                </button>
+                {expandedGroup === group.id && (
+                  <div className="border-t border-border divide-y divide-border">
+                    {group.lenders.map(lender => {
+                      const currentName = config.lenderNames[lender.id] ?? lender.abbreviation;
+                      const isCustomized = currentName !== lender.abbreviation;
+                      return (
+                        <div key={lender.id} className="flex items-center gap-3 px-3 py-2 bg-muted/10">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{lender.fullName}</p>
+                            <p className="text-xs text-muted-foreground">Default: {lender.abbreviation}</p>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <Input
+                              value={currentName}
+                              onChange={e => updateLenderName(lender.id, e.target.value)}
+                              className={cn("h-7 w-28 text-xs", isCustomized && "border-primary/60")}
+                            />
+                            {isCustomized && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                onClick={() => resetLenderName(lender.id)}
+                                title="Reset to default"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+            {groupedLenders.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-6">No institutions match your search</p>
+            )}
           </div>
         </div>
       </div>

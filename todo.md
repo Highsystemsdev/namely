@@ -114,3 +114,9 @@
 
 ## Bug Fixes (Round 16)
 - [x] Fix: FolderRenamePreviewDialog Apply button shows "Download" for Pick Files — now always says "Rename X file(s)" since both modes rename in-place
+
+## New Features (Round 17 - Dynamic Tags)
+- [x] MASTER_TAGS registry: 35+ tags with keys, labels, descriptions and examples in documentTypes.ts
+- [x] Tag reference popup: "View all available tags" link in Config info box opens searchable popover with click-to-copy
+- [x] Per-template "All tags" collapsible section: shows all MASTER_TAGS not in suggested list, click to insert at cursor
+- [x] Dynamic missing-field detection: computeMissingFields resolves labels from MASTER_TAGS so any added tag gets a proper human-readable name in warnings
