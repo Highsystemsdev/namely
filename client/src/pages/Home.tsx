@@ -576,22 +576,27 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Upload zone */}
-          <div
-            className={cn("drop-zone cursor-pointer", isDragOver && "drag-over")}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+          {/* Upload zone — two visually separated sections */}
+          <div className="border border-dashed border-border rounded-lg overflow-hidden">
+
+            {/* Section 1: Upload / drag-and-drop */}
+            <div
+              className={cn(
+                "cursor-pointer transition-colors px-6 py-7 flex flex-col items-center text-center",
+                isDragOver ? "bg-primary/5" : "bg-background hover:bg-muted/40"
+              )}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+            >
               <div className={cn(
                 "w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors",
                 isDragOver ? "bg-primary/10" : "bg-muted"
               )}>
                 <Upload className={cn("h-5 w-5 transition-colors", isDragOver ? "text-primary" : "text-muted-foreground")} />
               </div>
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
+              <div className="flex items-center gap-2 text-sm font-medium mb-1">
                 <button
                   className="text-primary hover:underline font-semibold"
                   onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
@@ -599,10 +604,31 @@ export default function Home() {
                   + Upload files
                 </button>
                 <span className="text-muted-foreground">or drop files here</span>
-                <span className="text-muted-foreground">·</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Renamed files are downloaded to your Downloads folder.
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 px-6 py-2 bg-muted/30 border-t border-b border-dashed border-border">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">or rename in place</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            {/* Section 2: Pick files / Pick folder */}
+            <div
+              className="px-6 py-7 flex flex-col items-center text-center bg-background"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 bg-muted">
+                <FolderOpen className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex items-center gap-2 text-sm font-medium mb-1 flex-wrap justify-center">
                 <button
                   className="text-primary hover:underline font-semibold flex items-center gap-1"
-                  onClick={e => { e.stopPropagation(); pickFilesInputRef.current?.click(); }}
+                  onClick={() => pickFilesInputRef.current?.click()}
                   disabled={isFolderLoading}
                 >
                   {isFolderLoading ? (
@@ -612,12 +638,12 @@ export default function Home() {
                   )}
                   Pick files
                 </button>
-                {isFolderPickerSupported && !isInsideCrossOriginIframe && (
+                {(isFolderPickerSupported && !isInsideCrossOriginIframe) && (
                   <>
-                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground">or</span>
                     <button
                       className="text-primary hover:underline font-semibold flex items-center gap-1"
-                      onClick={e => { e.stopPropagation(); handleOpenFolder(); }}
+                      onClick={() => handleOpenFolder()}
                       disabled={isFolderLoading}
                     >
                       {isFolderLoading ? (
@@ -625,10 +651,11 @@ export default function Home() {
                       ) : (
                         <FolderOpen className="h-3.5 w-3.5" />
                       )}
-                      Open folder
+                      Pick folder
                     </button>
                   </>
                 )}
+                <span className="text-muted-foreground">to rename them within their existing folder</span>
               </div>
               <p className="text-xs text-muted-foreground">
                 Supports PDF, PNG, JPG, HEIC, HEIF, WEBP, XLS, XLSX, XLSM, XLT, XLTX, XLTM (Max 50MB per file)
@@ -646,7 +673,6 @@ export default function Home() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline font-semibold hover:text-amber-700"
-                    onClick={e => e.stopPropagation()}
                   >
                     Open in a new tab
                   </a>
@@ -654,6 +680,8 @@ export default function Home() {
                 </p>
               )}
             </div>
+
+            {/* Hidden inputs */}
             <input
               ref={fileInputRef}
               type="file"
@@ -662,7 +690,6 @@ export default function Home() {
               className="hidden"
               onChange={e => e.target.files && handleFiles(e.target.files)}
             />
-            {/* Hidden input for individual file picking — feeds into the rename preview pipeline */}
             <input
               ref={pickFilesInputRef}
               type="file"

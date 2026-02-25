@@ -101,3 +101,6 @@
 ## New Features (Round 12)
 - [x] Add {lender} tag to Serviceability Calc document type template and variables
 - [x] Add "Pick files" button alongside "Open folder" — uses standard file input, feeds selected files into the folder rename preview pipeline (downloads renamed files, works in all browsers including Safari)
+
+## UX Improvements (Round 13)
+- [x] Redesign upload zone: two separated sections — (1) Upload Files / drop zone, (2) Pick Files or Pick Folder with clear description
