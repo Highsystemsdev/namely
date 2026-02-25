@@ -2,11 +2,13 @@
  * FolderRenamePreviewDialog
  *
  * Shows a full before/after rename preview for all files discovered in the
- * selected folder. The user can toggle individual rows on/off before
- * confirming. Only approved rows are renamed on disk.
+ * selected folder. The user can:
+ *  - Toggle individual rows on/off before confirming
+ *  - Click any "New Name" cell to edit it inline (Enter/blur = confirm, Escape = cancel)
+ * Only approved rows are renamed on disk.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +25,7 @@ import {
   ChevronRight,
   Loader2,
   FolderOpen,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProcessedDocument } from "@/lib/aiProcessor";
@@ -43,6 +46,7 @@ interface FolderRenamePreviewDialogProps {
   onApprovalChange: (id: string, approved: boolean) => void;
   onApproveAll: () => void;
   onApplyRenames: () => void;
+  onNameChange: (id: string, newName: string) => void;
   onClose: () => void;
 }
 
@@ -70,6 +74,103 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   );
 }
 
+/** Inline-editable new-name cell */
+function EditableNameCell({
+  value,
+  isLowConf,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  isLowConf: boolean;
+  disabled: boolean;
+  onChange: (v: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Keep draft in sync if parent value changes while not editing
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [value, editing]);
+
+  function startEdit() {
+    if (disabled) return;
+    setDraft(value);
+    setEditing(true);
+  }
+
+  function commit() {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== value) onChange(trimmed);
+    setEditing(false);
+  }
+
+  function cancel() {
+    setDraft(value);
+    setEditing(false);
+  }
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1 min-w-0">
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => {
+            if (e.key === "Enter") { e.preventDefault(); commit(); }
+            if (e.key === "Escape") { e.preventDefault(); cancel(); }
+          }}
+          className="flex-1 min-w-0 h-6 px-1.5 text-xs font-mono border border-primary rounded bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        <button
+          onMouseDown={e => { e.preventDefault(); commit(); }}
+          className="text-emerald-600 hover:text-emerald-700 flex-shrink-0"
+          tabIndex={-1}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onMouseDown={e => { e.preventDefault(); cancel(); }}
+          className="text-muted-foreground hover:text-foreground flex-shrink-0"
+          tabIndex={-1}
+        >
+          <AlertCircle className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={startEdit}
+      disabled={disabled}
+      className={cn(
+        "group flex items-start gap-1 min-w-0 text-left w-full",
+        !disabled && "cursor-pointer hover:opacity-80"
+      )}
+      title={disabled ? undefined : "Click to edit filename"}
+    >
+      <span className={cn(
+        "text-xs font-mono break-all leading-relaxed flex-1 min-w-0",
+        isLowConf ? "text-orange-800" : "text-foreground"
+      )}>
+        {value}
+      </span>
+      {!disabled && (
+        <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+      )}
+    </button>
+  );
+}
+
 export function FolderRenamePreviewDialog({
   open,
   items,
@@ -78,6 +179,7 @@ export function FolderRenamePreviewDialog({
   onApprovalChange,
   onApproveAll,
   onApplyRenames,
+  onNameChange,
   onClose,
 }: FolderRenamePreviewDialogProps) {
   const approvedCount = items.filter(i => i.approved).length;
@@ -123,7 +225,7 @@ export function FolderRenamePreviewDialog({
                   {lowConfidenceCount} below 80% confidence — please review carefully.{" "}
                 </span>
               )}
-              Uncheck any rows you want to skip, then click Apply.
+              Uncheck rows to skip, or click a new name to edit it before applying.
             </p>
           )}
           {isDone && (
@@ -143,7 +245,9 @@ export function FolderRenamePreviewDialog({
             <div className="grid grid-cols-[32px_minmax(180px,1fr)_minmax(200px,1.4fr)_100px_80px_56px] gap-3 px-4 py-2 bg-muted/50 border-b border-border sticky top-0 z-10">
               <div />
               <span className="text-xs font-medium text-muted-foreground">Original Name</span>
-              <span className="text-xs font-medium text-muted-foreground">New Name</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                New Name{!isDone && <span className="text-muted-foreground/60 font-normal"> (click to edit)</span>}
+              </span>
               <span className="text-xs font-medium text-muted-foreground">Type</span>
               <span className="text-xs font-medium text-muted-foreground">Confidence</span>
               <span className="text-xs font-medium text-muted-foreground">Status</span>
@@ -187,14 +291,14 @@ export function FolderRenamePreviewDialog({
                       </p>
                     </div>
 
-                    {/* New name — wraps onto multiple lines if needed */}
+                    {/* New name — inline editable */}
                     <div className="min-w-0">
-                      <p className={cn(
-                        "text-xs filename-mono break-all leading-relaxed",
-                        isLowConf ? "text-orange-800" : "text-foreground"
-                      )}>
-                        {displayName}
-                      </p>
+                      <EditableNameCell
+                        value={displayName}
+                        isLowConf={isLowConf}
+                        disabled={isApplying || isDone}
+                        onChange={newName => onNameChange(item.doc.id, newName)}
+                      />
                     </div>
 
                     {/* Document type */}

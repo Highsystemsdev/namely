@@ -76,3 +76,7 @@
 
 ## UX Improvements (Round 8)
 - [x] FolderRenamePreviewDialog: default width 80vw, user-resizable in both dimensions
+
+## New Features (Round 9)
+- [x] Inline filename editing in FolderRenamePreviewDialog: click new name to edit, Enter/blur to confirm, Escape to cancel
+- [x] New logo and favicon: simplified file-with-pencil icon (teal background, white file + yellow-tipped pencil)

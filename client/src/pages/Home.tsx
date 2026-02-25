@@ -372,6 +372,14 @@ export default function Home() {
     ));
   }
 
+  function handleFolderNameChange(id: string, newName: string) {
+    setFolderItems(prev => prev.map(item =>
+      item.doc.id === id
+        ? { ...item, doc: { ...item.doc, customName: newName } }
+        : item
+    ));
+  }
+
   async function handleApplyRenames() {
     setIsApplyingRenames(true);
     setApplyResults([]);
@@ -397,9 +405,11 @@ export default function Home() {
       <header className="border-b border-border bg-white sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded bg-primary flex items-center justify-center flex-shrink-0">
-              <FileText className="h-3.5 w-3.5 text-primary-foreground" />
-            </div>
+            <img
+              src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663351580376/dHinwXYUkQDhxVeQ.png"
+              alt="Doc Renamer logo"
+              className="w-8 h-8 rounded-lg flex-shrink-0"
+            />
             <div>
               <h1 className="text-base font-semibold leading-none">Doc Renamer</h1>
               <p className="text-xs text-muted-foreground mt-0.5">AI-powered document detection and renaming tool</p>
@@ -589,6 +599,7 @@ export default function Home() {
         onApprovalChange={handleFolderApprovalChange}
         onApproveAll={handleFolderApproveAll}
         onApplyRenames={handleApplyRenames}
+        onNameChange={handleFolderNameChange}
         onClose={handleFolderPreviewClose}
       />
     </div>
