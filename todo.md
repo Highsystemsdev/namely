@@ -104,3 +104,6 @@
 
 ## UX Improvements (Round 13)
 - [x] Redesign upload zone: two separated sections — (1) Upload Files / drop zone, (2) Pick Files or Pick Folder with clear description
+
+## Bug Fixes (Round 14)
+- [x] Fix: Pick Folder incorrectly sets isIndividualMode=true causing download instead of in-place rename

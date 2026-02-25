@@ -380,6 +380,7 @@ export default function Home() {
         }
       }
 
+      setIsIndividualMode(false); // folder mode — rename in-place
       setFolderItems(items);
       setApplyResults([]);
       setFolderPreviewOpen(true);
