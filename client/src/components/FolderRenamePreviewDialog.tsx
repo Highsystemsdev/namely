@@ -301,11 +301,20 @@ export function FolderRenamePreviewDialog({
                       />
                     </div>
 
-                    {/* Document type */}
+                    {/* Document type + missing fields */}
                     <div className="min-w-0 pt-0.5">
                       <span className="text-xs text-muted-foreground break-words leading-relaxed block">
                         {item.doc.documentTypeLabel}
                       </span>
+                      {item.doc.missingFields && item.doc.missingFields.length > 0 && (
+                        <span
+                          className="inline-flex items-center gap-0.5 mt-1 text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-300 rounded px-1 py-0.5 cursor-default"
+                          title={`Could not extract: ${item.doc.missingFields.join(", ")}`}
+                        >
+                          <AlertTriangle className="h-2.5 w-2.5 flex-shrink-0" />
+                          Missing: {item.doc.missingFields.join(", ")}
+                        </span>
+                      )}
                     </div>
 
                     {/* Confidence */}

@@ -25,6 +25,8 @@ export interface ProcessedDocument {
   customName: string | null;
   status: "processing" | "done" | "error";
   errorMessage?: string;
+  /** Template variables that were required but not extracted by the AI */
+  missingFields: string[];
   file: File;
 }
 
@@ -383,13 +385,82 @@ function guessDocumentType(filename: string): { typeId: string; confidence: numb
   return { typeId, confidence: Math.floor(Math.random() * 25 + 55) };
 }
 
+/**
+ * Match a raw lender string (as returned by the AI) to a configured abbreviation.
+ * Tries full-name match, then abbreviation match, then partial substring match.
+ * Returns the configured abbreviation if found, or the original string unchanged.
+ */
+export function resolveLenderAbbreviation(
+  rawLender: string,
+  lenderNames: Record<string, string>
+): string {
+  if (!rawLender) return rawLender;
+  const lower = rawLender.toLowerCase().trim();
+
+  // 1. Exact full-name match (case-insensitive)
+  const exactMatch = LENDERS.find(l => l.fullName.toLowerCase() === lower);
+  if (exactMatch) return lenderNames[exactMatch.id] || exactMatch.abbreviation;
+
+  // 2. Exact abbreviation match (case-insensitive)
+  const abbrMatch = LENDERS.find(l => l.abbreviation.toLowerCase() === lower);
+  if (abbrMatch) return lenderNames[abbrMatch.id] || abbrMatch.abbreviation;
+
+  // 3. Partial substring match — the AI may return a slightly different form
+  //    e.g. "ING Banking Limited" should match "ING Australia"
+  //    We only use word-boundary matching to avoid false positives like
+  //    "Unknown" matching "Now Finance" ("now" inside "unknown").
+  const COMMON_WORDS = new Set(["bank", "the", "and", "of", "for", "in", "at", "by", "to", "a", "an"]);
+  const partialMatch = LENDERS.find(l => {
+    const lowerFull = l.fullName.toLowerCase();
+    const lowerAbbr = l.abbreviation.toLowerCase();
+    // Full-name substring (directional)
+    if (lower.includes(lowerFull) || lowerFull.includes(lower)) return true;
+    // First word of abbreviation must be a whole word in the raw string
+    const firstWord = lowerAbbr.split(/\s+/)[0];
+    if (firstWord.length >= 3 && !COMMON_WORDS.has(firstWord)) {
+      // Use word-boundary regex to avoid partial matches
+      const wordBoundary = new RegExp(`(^|\\s)${firstWord}(\\s|$|\\b)`);
+      if (wordBoundary.test(lower)) return true;
+    }
+    return false;
+  });
+  if (partialMatch) return lenderNames[partialMatch.id] || partialMatch.abbreviation;
+
+  // 4. No match — return as-is
+  return rawLender;
+}
+
+/**
+ * Determine which template variables were required but not extracted.
+ * Parses {variable} tokens from the template and checks extractedData.
+ */
+export function computeMissingFields(
+  template: string,
+  extractedData: ExtractedData,
+  docType: { variables: Array<{ key: string; label: string }> }
+): string[] {
+  // Find all {variable} tokens in the template
+  const tokenMatches = template.match(/\{([^}]+)\}/g) || [];
+  const requiredKeys = tokenMatches.map(t => t.slice(1, -1));
+
+  return requiredKeys.filter(key => {
+    const value = extractedData[key];
+    return !value || value.trim() === "";
+  }).map(key => {
+    // Use the human-readable label from the doc type variables if available
+    const varDef = docType.variables.find(v => v.key === key);
+    return varDef ? varDef.label : `{${key}}`;
+  });
+}
+
 export async function processDocument(
   file: File,
   templates: Record<string, string>,
   separator: string,
   nameFormat: string,
   dateOrder: string,
-  dateSeparator: string
+  dateSeparator: string,
+  lenderNames: Record<string, string> = {}
 ): Promise<ProcessedDocument> {
   const id = Math.random().toString(36).slice(2);
   // Preserve the original file extension — no conversion is performed,
@@ -408,16 +479,25 @@ export async function processDocument(
   // Step 3: Find the matching document type config
   const docType = DOCUMENT_TYPES.find(d => d.id === forgeResult.documentTypeId) || DOCUMENT_TYPES[0];
 
+  // Step 3b: Resolve lender abbreviation if a lender was extracted
+  const resolvedData = { ...forgeResult.extractedData };
+  if (resolvedData.lender) {
+    resolvedData.lender = resolveLenderAbbreviation(resolvedData.lender, lenderNames);
+  }
+
   // Step 4: Apply naming template
   const template = templates[forgeResult.documentTypeId] || docType.defaultTemplate;
   const proposedName = applyTemplate(
     template,
-    forgeResult.extractedData,
+    resolvedData,
     separator,
     nameFormat,
     dateOrder,
     dateSeparator
   );
+
+  // Step 5: Compute missing fields
+  const missingFields = computeMissingFields(template, resolvedData, docType);
 
   return {
     id,
@@ -427,10 +507,11 @@ export async function processDocument(
     documentTypeId: forgeResult.documentTypeId,
     documentTypeLabel: forgeResult.documentTypeLabel,
     confidence: forgeResult.confidence,
-    extractedData: forgeResult.extractedData,
+    extractedData: resolvedData,
     proposedName: proposedName + ext,
     customName: null,
     status: "done",
+    missingFields,
     file,
   };
 }

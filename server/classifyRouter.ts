@@ -114,13 +114,13 @@ FIELD EXTRACTION RULES:
   * Notice of Assessment, Individual Tax Return, Company Tax Return, ATO Tax Account: names may appear as "Surname, Firstname Initial" (e.g. "Kennedy, John J") — always convert to "Firstname Initial Surname" (e.g. "John J Kennedy").
   * Payslip, Income Statement, Employment Contract: names are typically "Firstname Surname" — return as-is.
   * For all other documents: return the name in natural "Firstname [Middle] Surname" order.
-- date: Primary document date in DD-MM-YYYY format (e.g. "30-06-2023")
-- expiryDate: Expiry date in DD-MM-YYYY format
-- payPeriod: Pay period end date in DD-MM-YYYY format
-- statementDate: Statement date in DD-MM-YYYY format
+- date: Primary document date in DD-MM-YYYY format (e.g. "30-06-2023"). ALWAYS attempt to extract a date. If the full date is not visible, return a partial date: year only as "01-01-YYYY", or month and year as "01-MM-YYYY". Only omit entirely if no date information whatsoever is present.
+- expiryDate: Expiry date in DD-MM-YYYY format. Apply the same partial-date rule as above.
+- payPeriod: Pay period end date in DD-MM-YYYY format. Apply the same partial-date rule as above.
+- statementDate: Statement date in DD-MM-YYYY format. Apply the same partial-date rule as above.
 - financialYear: Financial year as "YYYY-YY" (e.g. "2022-23")
 - month: Statement month as "Month YYYY" (e.g. "June 2023")
-- lender: Financial institution name (full name, e.g. "National Australia Bank")
+- lender: Financial institution full name exactly as it appears on the document (e.g. "National Australia Bank", "ING Banking Limited", "Commonwealth Bank of Australia"). Do NOT abbreviate — return the full name so it can be matched to the correct abbreviation. If no lender is visible, omit this field.
 - employer: Employer name
 - company: Company or business name
 - abn: ABN as 11 digits without spaces (e.g. "12345678901")

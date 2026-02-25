@@ -80,3 +80,11 @@
 ## New Features (Round 9)
 - [x] Inline filename editing in FolderRenamePreviewDialog: click new name to edit, Enter/blur to confirm, Escape to cancel
 - [x] New logo and favicon: simplified file-with-pencil icon (teal background, white file + yellow-tipped pencil)
+
+## New Features (Round 10)
+- [x] Stronger AI extraction prompt: date fields always attempted (partial dates if full date unavailable), lender returns full name for matching
+- [x] Missing-tag detection: computeMissingFields compares template variables vs extracted data; missingFields added to ProcessedDocument
+- [x] Missing-tag badges in upload table: amber "N missing" badge with tooltip listing field names
+- [x] Missing-tag badges in folder preview dialog: amber "Missing: {field}" badge below document type
+- [x] Lender abbreviation matching: resolveLenderAbbreviation tries exact full-name, abbreviation, then word-boundary partial match; applied in processDocument before template substitution
+- [x] 12 new vitest tests for resolveLenderAbbreviation and computeMissingFields (49 total passing)

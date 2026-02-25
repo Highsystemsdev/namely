@@ -130,6 +130,7 @@ export default function Home() {
       proposedName: "",
       customName: null,
       status: "processing",
+      missingFields: [],
       file: f,
     }));
 
@@ -144,7 +145,8 @@ export default function Home() {
           config.separator,
           config.nameFormat,
           config.dateOrder,
-          config.dateSeparator
+          config.dateSeparator,
+          config.lenderNames
         );
         setDocuments(prev => prev.map(d => d.id === placeholder.id ? result : d));
       } catch (err) {
@@ -323,7 +325,8 @@ export default function Home() {
             config.separator,
             config.nameFormat,
             config.dateOrder,
-            config.dateSeparator
+            config.dateSeparator,
+            config.lenderNames
           );
           items.push({ folderFile, doc, approved: true });
         } catch (err) {
@@ -343,6 +346,7 @@ export default function Home() {
             customName: null,
             status: "error",
             errorMessage: errMsg,
+            missingFields: [],
             file: folderFile.file,
           };
           items.push({ folderFile, doc: errorDoc, approved: false });
@@ -761,9 +765,25 @@ function DocumentRow({
         )}
       </div>
 
-      {/* Document type */}
+      {/* Document type + missing fields warning */}
       <div className="min-w-0">
         <span className="text-xs text-muted-foreground truncate block">{doc.documentTypeLabel}</span>
+        {doc.missingFields && doc.missingFields.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-0.5 mt-0.5 text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-300 rounded px-1 py-0.5 cursor-default">
+                <AlertTriangle className="h-2.5 w-2.5 flex-shrink-0" />
+                {doc.missingFields.length} missing
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs max-w-xs">
+              <p className="font-medium mb-1">Could not extract:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                {doc.missingFields.map(f => <li key={f}>{f}</li>)}
+              </ul>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {/* Confidence */}
