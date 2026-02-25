@@ -539,8 +539,10 @@ export default function Home() {
           {/* Document list */}
           {documents.length > 0 && (
             <div className="border border-border rounded-lg overflow-hidden bg-white">
+              {/* Horizontal scroll wrapper so long filenames are never clipped */}
+              <div className="overflow-x-auto">
               {/* Table header */}
-              <div className="grid grid-cols-[1fr_2fr_100px_80px] gap-3 px-4 py-2.5 bg-muted/50 border-b border-border">
+              <div className="grid grid-cols-[minmax(160px,1fr)_minmax(220px,1.5fr)_110px_90px] gap-3 px-4 py-2.5 bg-muted/50 border-b border-border min-w-[640px]">
                 <span className="text-xs font-medium text-muted-foreground">Original File</span>
                 <span className="text-xs font-medium text-muted-foreground">Renamed To</span>
                 <span className="text-xs font-medium text-muted-foreground">Type</span>
@@ -548,7 +550,7 @@ export default function Home() {
               </div>
 
               {/* Document rows */}
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-border min-w-[640px]">
                 {documents.map(doc => (
                   <DocumentRow
                     key={doc.id}
@@ -565,6 +567,7 @@ export default function Home() {
                   />
                 ))}
               </div>
+              </div>{/* end overflow-x-auto */}
             </div>
           )}
         </div>

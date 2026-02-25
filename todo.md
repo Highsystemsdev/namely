@@ -69,3 +69,7 @@
 
 ## Bug Fixes (Round 6)
 - [x] Fix: showDirectoryPicker blocked in cross-origin iframe — detect iframe context, show "Open in new tab" guidance instead of error
+
+## Bug Fixes (Round 7)
+- [x] Fix: preserve original file extension instead of forcing .pdf (jpeg stays jpeg, pdf stays pdf)
+- [x] Fix: long filenames truncated in rename preview table — both tables now use break-all wrapping and horizontal scroll

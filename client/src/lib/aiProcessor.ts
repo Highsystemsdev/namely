@@ -392,8 +392,12 @@ export async function processDocument(
   dateSeparator: string
 ): Promise<ProcessedDocument> {
   const id = Math.random().toString(36).slice(2);
-  // Always output as .pdf — images and scanned docs are also saved as PDF
-  const ext = ".pdf";
+  // Preserve the original file extension — no conversion is performed,
+  // so renaming a JPEG to .pdf would produce a corrupt file.
+  const originalExt = file.name.includes(".")
+    ? "." + file.name.split(".").pop()!.toLowerCase()
+    : "";
+  const ext = originalExt;
 
   // Step 1: Extract text or render image from the document
   const extraction = await extractDocumentContent(file);
