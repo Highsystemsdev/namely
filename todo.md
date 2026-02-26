@@ -126,3 +126,10 @@
 - [x] When user changes document type, re-apply the new type's template using already-extracted metadata
 - [x] Update confidence display after type change (show "Edited" indicator with pencil icon instead of confidence %)
 - [x] Keep existing inline filename editing working alongside the new type selector
+
+## New Features (Round 19 - Signature Detection & Discharge Form)
+- [x] Add {signed} to MASTER_TAGS registry with description
+- [x] Add Discharge Form document type with template Discharge Form {lender} {name} {date} {signed}
+- [x] Update Forge AI extraction prompt to detect signatures and return signed field
+- [x] {signed} is a conditional tag: renders as Signed when present, omitted entirely when blank
+- [x] Update classifyRouter.ts DOCUMENT_TYPE_LIST and LABEL_TO_ID to include Discharge Form

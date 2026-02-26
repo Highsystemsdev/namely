@@ -28,7 +28,7 @@ const DOCUMENT_TYPE_LIST = [
   "Rates Notice", "Rental Appraisal", "Rental Statement", "Salary Packaging",
   "Savings Statement", "Serviceability Calc", "Settlement Letter",
   "Superannuation Statement", "Tenancy Agreement", "Transaction Listing", "Trust Deed",
-  "Trust Tax Return", "Visa/Immigration", "Water Bill", "Unknown",
+  "Trust Tax Return", "Visa/Immigration", "Water Bill", "Discharge Form", "Unknown",
 ];
 
 // Map from document type label to the template ID used in the app
@@ -95,6 +95,7 @@ const LABEL_TO_ID: Record<string, string> = {
   "Trust Tax Return": "trust-tax-return",
   "Visa/Immigration": "visa-immigration",
   "Water Bill": "water-bill",
+  "Discharge Form": "discharge-form",
 };
 
 function buildSystemPrompt(): string {
@@ -143,6 +144,7 @@ FIELD EXTRACTION RULES:
 - paymentType: Type of Centrelink payment (e.g. "JobSeeker")
 - incomeTaxBalance: Income tax balance with $ sign
 - activityStatementBalance: Activity statement balance with $ sign
+- signed: Whether the document contains a handwritten or digital signature. Return "Signed" if any signature (ink, drawn, or digital) is clearly visible on the document. Return an empty string "" if the document is unsigned or is a blank template. This is especially important for discharge forms, consent forms, declarations, and any form that has a signature field.
 
 RESPONSE FORMAT (strict JSON, no markdown, no explanation):
 {

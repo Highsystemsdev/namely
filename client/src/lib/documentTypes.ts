@@ -39,6 +39,7 @@ const creditLimitVar: DocumentVariable = { key: "creditLimit", label: "{creditLi
 const weeklyRentVar: DocumentVariable = { key: "weeklyRent", label: "{weeklyRent}", description: "Weekly rent amount", example: "$450" };
 const valuationAmountVar: DocumentVariable = { key: "valuationAmount", label: "{valuationAmount}", description: "Valuation amount", example: "$750,000" };
 const purchasePriceVar: DocumentVariable = { key: "purchasePrice", label: "{purchasePrice}", description: "Purchase price", example: "$650,000" };
+const signedVar: DocumentVariable = { key: "signed", label: "{signed}", description: "Signature detected — renders as 'Signed' when a signature is present, omitted when blank", example: "Signed" };
 
 export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
   {
@@ -153,6 +154,12 @@ export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
     label: "Deposit Receipt",
     defaultTemplate: "Deposit Receipt {name} {propertyAddress} {date}",
     variables: [nameVar, propertyAddressVar, dateVar, { key: "depositAmount", label: "{depositAmount}", description: "Deposit amount", example: "$50,000" }],
+  },
+  {
+    id: "discharge-form",
+    label: "Discharge Form",
+    defaultTemplate: "Discharge Form {lender} {name} {date} {signed}",
+    variables: [lenderVar, nameVar, dateVar, signedVar, documentNumberVar],
   },
   {
     id: "drivers-license",
@@ -624,6 +631,7 @@ export const MASTER_TAGS: DocumentVariable[] = [
   { key: "taxRefund", label: "{taxRefund}", description: "Tax refund amount", example: "$2,500" },
   { key: "totalBalance", label: "{totalBalance}", description: "Total balance", example: "$2,800" },
   { key: "statementDate", label: "{statementDate}", description: "Statement date", example: "20-05-2023" },
+  signedVar,
 ];
 
 // Separator options
