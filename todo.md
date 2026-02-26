@@ -120,3 +120,9 @@
 - [x] Tag reference popup: "View all available tags" link in Config info box opens searchable popover with click-to-copy
 - [x] Per-template "All tags" collapsible section: shows all MASTER_TAGS not in suggested list, click to insert at cursor
 - [x] Dynamic missing-field detection: computeMissingFields resolves labels from MASTER_TAGS so any added tag gets a proper human-readable name in warnings
+
+## New Features (Round 18 - Editable Document Type)
+- [x] Editable document type dropdown in rename preview dialog (Type column becomes a Select)
+- [x] When user changes document type, re-apply the new type's template using already-extracted metadata
+- [x] Update confidence display after type change (show "Edited" indicator with pencil icon instead of confidence %)
+- [x] Keep existing inline filename editing working alongside the new type selector

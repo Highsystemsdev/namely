@@ -27,6 +27,8 @@ export interface ProcessedDocument {
   errorMessage?: string;
   /** Template variables that were required but not extracted by the AI */
   missingFields: string[];
+  /** True when the user manually changed the document type in the preview dialog */
+  userOverriddenType?: boolean;
   file: File;
 }
 

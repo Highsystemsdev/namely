@@ -5,6 +5,7 @@
  * selected folder. The user can:
  *  - Toggle individual rows on/off before confirming
  *  - Click any "New Name" cell to edit it inline (Enter/blur = confirm, Escape = cancel)
+ *  - Change the Document Type via a dropdown — the filename is re-generated automatically
  * Only approved rows are renamed on disk.
  */
 
@@ -16,6 +17,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -26,8 +34,10 @@ import {
   Loader2,
   FolderOpen,
   Pencil,
+  UserPen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DOCUMENT_TYPES } from "@/lib/documentTypes";
 import type { ProcessedDocument } from "@/lib/aiProcessor";
 import type { FolderFile } from "@/hooks/useFolderPicker";
 
@@ -47,6 +57,8 @@ interface FolderRenamePreviewDialogProps {
   onApproveAll: () => void;
   onApplyRenames: () => void;
   onNameChange: (id: string, newName: string) => void;
+  /** Called when the user selects a different document type for a row */
+  onTypeChange: (id: string, newTypeId: string) => void;
   onClose: () => void;
   /** True when files were picked individually (not from a folder) — Apply downloads instead of renames in-place */
   isIndividualMode?: boolean;
@@ -58,7 +70,21 @@ export interface ApplyResult {
   message?: string;
 }
 
-function ConfidenceBadge({ confidence }: { confidence: number }) {
+function ConfidenceBadge({
+  confidence,
+  userOverridden,
+}: {
+  confidence: number;
+  userOverridden?: boolean;
+}) {
+  if (userOverridden) {
+    return (
+      <div className="flex items-center gap-1 flex-shrink-0" title="Document type changed by user">
+        <UserPen className="h-3 w-3 text-primary" />
+        <span className="text-xs font-medium text-primary">Edited</span>
+      </div>
+    );
+  }
   const isHigh = confidence >= 80;
   const isMedium = confidence >= 60 && confidence < 80;
   return (
@@ -66,10 +92,12 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
       {isHigh && <CheckCircle2 className="h-3 w-3 text-emerald-600" />}
       {isMedium && <AlertTriangle className="h-3 w-3 text-amber-500" />}
       {!isHigh && !isMedium && <AlertCircle className="h-3 w-3 text-red-500" />}
-      <span className={cn(
-        "text-xs font-medium",
-        isHigh ? "text-emerald-700" : isMedium ? "text-amber-600" : "text-red-600"
-      )}>
+      <span
+        className={cn(
+          "text-xs font-medium",
+          isHigh ? "text-emerald-700" : isMedium ? "text-amber-600" : "text-red-600"
+        )}
+      >
         {confidence}%
       </span>
     </div>
@@ -127,20 +155,32 @@ function EditableNameCell({
           onChange={e => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={e => {
-            if (e.key === "Enter") { e.preventDefault(); commit(); }
-            if (e.key === "Escape") { e.preventDefault(); cancel(); }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              cancel();
+            }
           }}
           className="flex-1 min-w-0 h-6 px-1.5 text-xs font-mono border border-primary rounded bg-background focus:outline-none focus:ring-1 focus:ring-ring"
         />
         <button
-          onMouseDown={e => { e.preventDefault(); commit(); }}
+          onMouseDown={e => {
+            e.preventDefault();
+            commit();
+          }}
           className="text-emerald-600 hover:text-emerald-700 flex-shrink-0"
           tabIndex={-1}
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
         </button>
         <button
-          onMouseDown={e => { e.preventDefault(); cancel(); }}
+          onMouseDown={e => {
+            e.preventDefault();
+            cancel();
+          }}
           className="text-muted-foreground hover:text-foreground flex-shrink-0"
           tabIndex={-1}
         >
@@ -160,16 +200,47 @@ function EditableNameCell({
       )}
       title={disabled ? undefined : "Click to edit filename"}
     >
-      <span className={cn(
-        "text-xs font-mono break-all leading-relaxed flex-1 min-w-0",
-        isLowConf ? "text-orange-800" : "text-foreground"
-      )}>
+      <span
+        className={cn(
+          "text-xs font-mono break-all leading-relaxed flex-1 min-w-0",
+          isLowConf ? "text-orange-800" : "text-foreground"
+        )}
+      >
         {value}
       </span>
       {!disabled && (
         <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
       )}
     </button>
+  );
+}
+
+/** Dropdown to change the document type for a single row */
+function DocTypeSelect({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  disabled: boolean;
+  onChange: (newTypeId: string) => void;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger
+        className="h-7 text-xs px-2 py-0 min-w-0 w-full border-muted-foreground/30 focus:ring-1"
+        title="Change document type"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="max-h-72 text-xs">
+        {DOCUMENT_TYPES.map(dt => (
+          <SelectItem key={dt.id} value={dt.id} className="text-xs">
+            {dt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -182,11 +253,12 @@ export function FolderRenamePreviewDialog({
   onApproveAll,
   onApplyRenames,
   onNameChange,
+  onTypeChange,
   onClose,
   isIndividualMode = false,
 }: FolderRenamePreviewDialogProps) {
   const approvedCount = items.filter(i => i.approved).length;
-  const lowConfidenceCount = items.filter(i => i.doc.confidence < 80).length;
+  const lowConfidenceCount = items.filter(i => i.doc.confidence < 80 && !i.doc.userOverriddenType).length;
 
   const resultMap = useMemo(() => {
     const m = new Map<string, ApplyResult>();
@@ -228,8 +300,7 @@ export function FolderRenamePreviewDialog({
                   {lowConfidenceCount} below 80% confidence — please review carefully.{" "}
                 </span>
               )}
-              Uncheck rows to skip, or click a new name to edit it before applying.
-
+              Uncheck rows to skip, click a new name to edit it, or change the document type if the AI got it wrong.
             </p>
           )}
           {isDone && (
@@ -244,9 +315,9 @@ export function FolderRenamePreviewDialog({
 
         {/* Table — horizontally scrollable so very long names never get cut off */}
         <div className="flex-1 overflow-auto">
-          <div className="min-w-[700px]">
+          <div className="min-w-[760px]">
             {/* Header row */}
-            <div className="grid grid-cols-[32px_minmax(180px,1fr)_minmax(200px,1.4fr)_100px_80px_56px] gap-3 px-4 py-2 bg-muted/50 border-b border-border sticky top-0 z-10">
+            <div className="grid grid-cols-[32px_minmax(160px,1fr)_minmax(200px,1.4fr)_minmax(140px,180px)_80px_56px] gap-3 px-4 py-2 bg-muted/50 border-b border-border sticky top-0 z-10">
               <div />
               <span className="text-xs font-medium text-muted-foreground">Original Name</span>
               <span className="text-xs font-medium text-muted-foreground">
@@ -261,17 +332,17 @@ export function FolderRenamePreviewDialog({
               {items.map(item => {
                 const result = resultMap.get(item.doc.id);
                 const displayName = item.doc.customName || item.doc.proposedName;
-                const isLowConf = item.doc.confidence < 80;
+                const isLowConf = item.doc.confidence < 80 && !item.doc.userOverriddenType;
 
                 return (
                   <div
                     key={item.doc.id}
                     className={cn(
-                      "grid grid-cols-[32px_minmax(180px,1fr)_minmax(200px,1.4fr)_100px_80px_56px] gap-3 px-4 py-3 items-start",
+                      "grid grid-cols-[32px_minmax(160px,1fr)_minmax(200px,1.4fr)_minmax(140px,180px)_80px_56px] gap-3 px-4 py-3 items-start",
                       isLowConf && item.approved && !result && "bg-orange-50 border-l-2 border-l-orange-400",
                       !item.approved && "opacity-50 bg-muted/20",
                       result?.status === "success" && "bg-emerald-50",
-                      result?.status === "error" && "bg-red-50",
+                      result?.status === "error" && "bg-red-50"
                     )}
                   >
                     {/* Checkbox */}
@@ -303,13 +374,7 @@ export function FolderRenamePreviewDialog({
                         disabled={isApplying || isDone}
                         onChange={newName => onNameChange(item.doc.id, newName)}
                       />
-                    </div>
-
-                    {/* Document type + missing fields */}
-                    <div className="min-w-0 pt-0.5">
-                      <span className="text-xs text-muted-foreground break-words leading-relaxed block">
-                        {item.doc.documentTypeLabel}
-                      </span>
+                      {/* Missing fields badge */}
                       {item.doc.missingFields && item.doc.missingFields.length > 0 && (
                         <span
                           className="inline-flex items-center gap-0.5 mt-1 text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-300 rounded px-1 py-0.5 cursor-default"
@@ -321,9 +386,27 @@ export function FolderRenamePreviewDialog({
                       )}
                     </div>
 
-                    {/* Confidence */}
+                    {/* Document type — editable dropdown */}
+                    <div className="min-w-0">
+                      {isDone ? (
+                        <span className="text-xs text-muted-foreground break-words leading-relaxed block">
+                          {item.doc.documentTypeLabel}
+                        </span>
+                      ) : (
+                        <DocTypeSelect
+                          value={item.doc.documentTypeId}
+                          disabled={isApplying}
+                          onChange={newTypeId => onTypeChange(item.doc.id, newTypeId)}
+                        />
+                      )}
+                    </div>
+
+                    {/* Confidence / override indicator */}
                     <div className="pt-0.5">
-                      <ConfidenceBadge confidence={item.doc.confidence} />
+                      <ConfidenceBadge
+                        confidence={item.doc.confidence}
+                        userOverridden={item.doc.userOverriddenType}
+                      />
                     </div>
 
                     {/* Status */}

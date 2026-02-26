@@ -31,7 +31,7 @@ import {
   type FolderRenameItem,
   type ApplyResult,
 } from "@/components/FolderRenamePreviewDialog";
-import { processDocument, applyTemplate, type ProcessedDocument } from "@/lib/aiProcessor";
+import { processDocument, applyTemplate, computeMissingFields, type ProcessedDocument } from "@/lib/aiProcessor";
 import { DOCUMENT_TYPES } from "@/lib/documentTypes";
 import { useConfig } from "@/contexts/ConfigContext";
 import { isFolderPickerSupported, isFilePickerSupported, isInsideCrossOriginIframe, pickFolder, pickFiles } from "@/hooks/useFolderPicker";
@@ -411,6 +411,48 @@ export default function Home() {
     ));
   }
 
+  function handleFolderTypeChange(id: string, newTypeId: string) {
+    setFolderItems(prev => prev.map(item => {
+      if (item.doc.id !== id) return item;
+
+      // Look up the new document type config
+      const newDocType = DOCUMENT_TYPES.find(d => d.id === newTypeId);
+      if (!newDocType) return item;
+
+      // Preserve the original file extension
+      const originalExt = item.doc.originalName.includes(".")
+        ? "." + item.doc.originalName.split(".").pop()!.toLowerCase()
+        : "";
+
+      // Re-apply the template for the new document type using already-extracted data
+      const template = config.templates[newTypeId] || newDocType.defaultTemplate;
+      const newProposedName = applyTemplate(
+        template,
+        item.doc.extractedData,
+        config.separator,
+        config.nameFormat,
+        config.dateOrder,
+        config.dateSeparator
+      ) + originalExt;
+
+      // Recompute missing fields for the new template
+      const newMissingFields = computeMissingFields(template, item.doc.extractedData, newDocType);
+
+      return {
+        ...item,
+        doc: {
+          ...item.doc,
+          documentTypeId: newTypeId,
+          documentTypeLabel: newDocType.label,
+          proposedName: newProposedName,
+          customName: null, // reset any manual edit so the new auto-name shows
+          missingFields: newMissingFields,
+          userOverriddenType: true,
+        },
+      };
+    }));
+  }
+
   async function handleApplyRenames() {
     setIsApplyingRenames(true);
     setApplyResults([]);
@@ -742,6 +784,7 @@ export default function Home() {
         onApproveAll={handleFolderApproveAll}
         onApplyRenames={handleApplyRenames}
         onNameChange={handleFolderNameChange}
+        onTypeChange={handleFolderTypeChange}
         onClose={handleFolderPreviewClose}
         isIndividualMode={isIndividualMode}
       />
