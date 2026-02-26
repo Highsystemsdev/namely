@@ -133,3 +133,9 @@
 - [x] Update Forge AI extraction prompt to detect signatures and return signed field
 - [x] {signed} is a conditional tag: renders as Signed when present, omitted entirely when blank
 - [x] Update classifyRouter.ts DOCUMENT_TYPE_LIST and LABEL_TO_ID to include Discharge Form
+
+## New Features (Round 20 - Fix Signature Detection & Loan Offer)
+- [x] Diagnose and fix signature detection — AI not returning "Signed" for signed documents
+- [x] Strengthen prompt: always include signed field in JSON response, not just when detected
+- [x] Ensure signed detection works for both image mode (scanned) and text mode (digital PDF)
+- [x] Add "Loan Offer & Mortgage" document type with template "Loan Offer & Mortgage {lender} {name} {date} {signed}"

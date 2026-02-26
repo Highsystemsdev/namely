@@ -162,6 +162,12 @@ export const DOCUMENT_TYPES: DocumentTypeConfig[] = [
     variables: [lenderVar, nameVar, dateVar, signedVar, documentNumberVar],
   },
   {
+    id: "loan-offer-mortgage",
+    label: "Loan Offer & Mortgage",
+    defaultTemplate: "Loan Offer & Mortgage {lender} {name} {date} {signed}",
+    variables: [lenderVar, nameVar, dateVar, signedVar, { key: "loanAmount", label: "{loanAmount}", description: "Loan amount", example: "$500,000" }, propertyAddressVar, documentNumberVar],
+  },
+  {
     id: "drivers-license",
     label: "Driver's License",
     defaultTemplate: "Drivers License {name} {expiryDate}",

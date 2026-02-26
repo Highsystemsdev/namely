@@ -93,15 +93,18 @@ export async function extractDocumentContent(file: File): Promise<ExtractionResu
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-    // Try text extraction first
+    // Always render page 1 as an image — this allows the AI to detect visual
+    // elements like signatures that are not present in the text layer.
+    const imageBase64 = await pdfPageToBase64(pdf);
     const text = await extractPdfText(pdf);
 
     if (text.length >= MIN_TEXT_LENGTH) {
-      // Digital PDF with sufficient text — use text mode (cheaper)
-      return { text, imageBase64: null, isImageMode: false };
+      // Digital PDF: send both text (for field extraction accuracy) and image
+      // (for visual signature detection). isImageMode=false means the server
+      // will include the image as a supplementary visual alongside the text.
+      return { text, imageBase64, isImageMode: false };
     } else {
-      // Scanned PDF or image-only PDF — render to image
-      const imageBase64 = await pdfPageToBase64(pdf);
+      // Scanned PDF or image-only PDF — image is the primary source
       return { text, imageBase64, isImageMode: true };
     }
   }

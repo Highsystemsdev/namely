@@ -28,7 +28,7 @@ const DOCUMENT_TYPE_LIST = [
   "Rates Notice", "Rental Appraisal", "Rental Statement", "Salary Packaging",
   "Savings Statement", "Serviceability Calc", "Settlement Letter",
   "Superannuation Statement", "Tenancy Agreement", "Transaction Listing", "Trust Deed",
-  "Trust Tax Return", "Visa/Immigration", "Water Bill", "Discharge Form", "Unknown",
+  "Trust Tax Return", "Visa/Immigration", "Water Bill", "Discharge Form", "Loan Offer & Mortgage", "Unknown",
 ];
 
 // Map from document type label to the template ID used in the app
@@ -96,6 +96,7 @@ const LABEL_TO_ID: Record<string, string> = {
   "Visa/Immigration": "visa-immigration",
   "Water Bill": "water-bill",
   "Discharge Form": "discharge-form",
+  "Loan Offer & Mortgage": "loan-offer-mortgage",
 };
 
 function buildSystemPrompt(): string {
@@ -144,19 +145,26 @@ FIELD EXTRACTION RULES:
 - paymentType: Type of Centrelink payment (e.g. "JobSeeker")
 - incomeTaxBalance: Income tax balance with $ sign
 - activityStatementBalance: Activity statement balance with $ sign
-- signed: Whether the document contains a handwritten or digital signature. Return "Signed" if any signature (ink, drawn, or digital) is clearly visible on the document. Return an empty string "" if the document is unsigned or is a blank template. This is especially important for discharge forms, consent forms, declarations, and any form that has a signature field.
+- signed: MANDATORY field — always include this in your response. Carefully examine the document for any signature: handwritten ink signatures, drawn/scribbled marks in signature boxes, digital signature blocks, typed names in signature fields, or any mark clearly intended as a signature. Return "Signed" if ANY signature is present anywhere on the document. Return "" (empty string) if the document is completely unsigned, is a blank template, or has empty signature boxes with no marks. Do NOT omit this field.
+
+SIGNATURE DETECTION GUIDANCE:
+- Look for: cursive/handwritten marks, scribbles, initials, printed names in designated signature areas, digital signature images, "Signed by" blocks
+- Blank signature lines with nothing on them = unsigned (return "")
+- A printed name typed into a signature field = signed (return "Signed")
+- Any mark, scribble, or image in a signature box = signed (return "Signed")
 
 RESPONSE FORMAT (strict JSON, no markdown, no explanation):
 {
   "documentType": "<exact type from list>",
   "confidence": <0-100 integer>,
   "fields": {
-    "<fieldName>": "<value>",
+    "signed": "Signed" or "",
+    "<other fieldName>": "<value>",
     ...
   }
 }
 
-Only include fields that are clearly present in the document. Do not guess or fabricate values.
+Only include fields (other than signed) that are clearly present in the document. Do not guess or fabricate values.
 If you cannot determine the document type, use "Unknown" with confidence 0.`;
 }
 
@@ -181,6 +189,7 @@ export const classifyRouter = router({
       const userContent: Array<{ type: string; text?: string; image_url?: { url: string; detail: string } }> = [];
 
       if (isImageMode && imageBase64) {
+        // Scanned PDF or image file — image is the primary source
         userContent.push({
           type: "image_url",
           image_url: {
@@ -191,6 +200,19 @@ export const classifyRouter = router({
         userContent.push({
           type: "text",
           text: `Classify and extract data from this document. Original filename: "${filename}"`,
+        });
+      } else if (text && imageBase64) {
+        // Digital PDF — send both text (for field accuracy) and image (for signature detection)
+        userContent.push({
+          type: "image_url",
+          image_url: {
+            url: `data:image/jpeg;base64,${imageBase64}`,
+            detail: "high",
+          },
+        });
+        userContent.push({
+          type: "text",
+          text: `Classify and extract data from this document. Use the image to detect signatures and visual elements. Use the text for accurate field extraction.\n\nOriginal filename: "${filename}"\n\nDOCUMENT TEXT:\n${text.slice(0, 8000)}`,
         });
       } else {
         userContent.push({

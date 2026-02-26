@@ -92,6 +92,39 @@ describe("{signed} tag — conditional rendering", () => {
   });
 });
 
+describe("Loan Offer & Mortgage document type", () => {
+  const loanOfferType = DOCUMENT_TYPES.find(d => d.id === "loan-offer-mortgage")!;
+
+  it("exists in DOCUMENT_TYPES", () => {
+    expect(loanOfferType).toBeDefined();
+    expect(loanOfferType.label).toBe("Loan Offer & Mortgage");
+  });
+
+  it("has the correct default template", () => {
+    expect(loanOfferType.defaultTemplate).toBe("Loan Offer & Mortgage {lender} {name} {date} {signed}");
+  });
+
+  it("produces correct filename when signed", () => {
+    const result = applyTemplate(loanOfferType.defaultTemplate, {
+      lender: "CBA",
+      name: "Jane Smith",
+      date: "15-03-2024",
+      signed: "Signed",
+    }, sep);
+    expect(result).toBe("Loan Offer & Mortgage - CBA - Jane Smith - 15-03-2024 - Signed");
+  });
+
+  it("produces correct filename when unsigned", () => {
+    const result = applyTemplate(loanOfferType.defaultTemplate, {
+      lender: "CBA",
+      name: "Jane Smith",
+      date: "15-03-2024",
+      signed: "",
+    }, sep);
+    expect(result).toBe("Loan Offer & Mortgage - CBA - Jane Smith - 15-03-2024");
+  });
+});
+
 describe("{signed} tag in MASTER_TAGS", () => {
   it("is present in MASTER_TAGS", () => {
     const signedTag = MASTER_TAGS.find(t => t.key === "signed");

@@ -52,7 +52,9 @@ export async function extractWithForge(
 
   const result = await client.docs.classify.mutate({
     text: extraction.isImageMode ? undefined : extraction.text,
-    imageBase64: (extraction.isImageMode && extraction.imageBase64) ? extraction.imageBase64 : undefined,
+    // Always send the image when available — even for text-mode PDFs.
+    // This lets the AI visually detect signatures that are not in the text layer.
+    imageBase64: extraction.imageBase64 ?? undefined,
     isImageMode: extraction.isImageMode,
     filename,
   });
