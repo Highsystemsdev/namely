@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DOCUMENT_TYPES } from "@/lib/documentTypes";
+import { useConfig } from "@/contexts/ConfigContext";
 import type { ProcessedDocument } from "@/lib/aiProcessor";
 import type { FolderFile } from "@/hooks/useFolderPicker";
 
@@ -225,6 +226,7 @@ function DocTypeSelect({
   disabled: boolean;
   onChange: (newTypeId: string) => void;
 }) {
+  const { config } = useConfig();
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger
@@ -239,6 +241,18 @@ function DocTypeSelect({
             {dt.label}
           </SelectItem>
         ))}
+        {config.customDocumentTypes.length > 0 && (
+          <>
+            <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+              Custom Types
+            </div>
+            {config.customDocumentTypes.map(ct => (
+              <SelectItem key={ct.id} value={ct.id} className="text-xs">
+                {ct.label}
+              </SelectItem>
+            ))}
+          </>
+        )}
       </SelectContent>
     </Select>
   );

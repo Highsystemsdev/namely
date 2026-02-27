@@ -147,3 +147,12 @@
 - [x] Update accepted file types in Home.tsx upload zone and folder picker
 - [x] Update accepted file types in the info banner and file size display
 - [x] Write tests for Word extraction logic (14 tests)
+
+## New Features (Round 22 - File Picker Fix & Custom Templates)
+- [x] Fix file picker accept attribute to include .doc, .docx, .dot, .dotx
+- [x] Add customDocumentTypes array to ConfigContext with full CRUD handlers
+- [x] Build Custom Types tab in Configure dialog (add, edit, delete with validation)
+- [x] Custom types appear in document type dropdown in rename preview dialog (grouped under "Custom Types")
+- [x] Custom template labels are included in the AI classification prompt (server-side)
+- [x] handleFolderTypeChange resolves custom types for template re-application
+- [x] 14 new vitest tests for custom document type logic (117 total passing)

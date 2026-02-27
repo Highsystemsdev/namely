@@ -7,6 +7,7 @@
 import { DOCUMENT_TYPES, LENDERS, MASTER_TAGS, type DocumentTypeConfig } from "./documentTypes";
 import { extractDocumentContent } from "./documentExtractor";
 import { extractWithForge } from "./forgeExtractor";
+import type { CustomDocumentType } from "@/contexts/ConfigContext";
 
 export interface ExtractedData {
   [key: string]: string;
@@ -467,7 +468,8 @@ export async function processDocument(
   nameFormat: string,
   dateOrder: string,
   dateSeparator: string,
-  lenderNames: Record<string, string> = {}
+  lenderNames: Record<string, string> = {},
+  customDocumentTypes: CustomDocumentType[] = []
 ): Promise<ProcessedDocument> {
   const id = Math.random().toString(36).slice(2);
   // Preserve the original file extension — no conversion is performed,
@@ -481,10 +483,17 @@ export async function processDocument(
   const extraction = await extractDocumentContent(file);
 
   // Step 2: Call Forge API to classify and extract fields
-  const forgeResult = await extractWithForge(extraction, file.name);
+  const customTypeLabels = customDocumentTypes.map(ct => ct.label);
+  const forgeResult = await extractWithForge(extraction, file.name, customTypeLabels);
 
-  // Step 3: Find the matching document type config
-  const docType = DOCUMENT_TYPES.find(d => d.id === forgeResult.documentTypeId) || DOCUMENT_TYPES[0];
+  // Step 3: Find the matching document type config — check built-in types first, then custom types
+  const builtInDocType = DOCUMENT_TYPES.find(d => d.id === forgeResult.documentTypeId);
+  const customDocType = customDocumentTypes.find(ct => ct.id === forgeResult.documentTypeId);
+  const docType = builtInDocType
+    ? { id: builtInDocType.id, label: builtInDocType.label, defaultTemplate: builtInDocType.defaultTemplate, variables: builtInDocType.variables }
+    : customDocType
+      ? { id: customDocType.id, label: customDocType.label, defaultTemplate: customDocType.template, variables: [] as [] }
+      : { id: DOCUMENT_TYPES[0].id, label: DOCUMENT_TYPES[0].label, defaultTemplate: DOCUMENT_TYPES[0].defaultTemplate, variables: DOCUMENT_TYPES[0].variables };
 
   // Step 3b: Resolve lender abbreviation if a lender was extracted
   const resolvedData = { ...forgeResult.extractedData };
@@ -492,8 +501,10 @@ export async function processDocument(
     resolvedData.lender = resolveLenderAbbreviation(resolvedData.lender, lenderNames);
   }
 
-  // Step 4: Apply naming template
-  const template = templates[forgeResult.documentTypeId] || docType.defaultTemplate;
+  // Step 4: Apply naming template — custom types use their own template directly
+  const template = customDocType
+    ? customDocType.template
+    : (templates[forgeResult.documentTypeId] || docType.defaultTemplate);
   const proposedName = applyTemplate(
     template,
     resolvedData,

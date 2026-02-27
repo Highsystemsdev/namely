@@ -43,10 +43,12 @@ function getClient() {
 /**
  * Calls the backend /api/trpc/docs.classify procedure.
  * The backend holds the BUILT_IN_FORGE_API_KEY securely.
+ * @param customTypeLabels Optional array of user-defined document type labels to include in classification
  */
 export async function extractWithForge(
   extraction: ExtractionResult,
-  filename: string
+  filename: string,
+  customTypeLabels?: string[]
 ): Promise<ForgeExtractionResult> {
   const client = getClient();
 
@@ -57,6 +59,7 @@ export async function extractWithForge(
     imageBase64: extraction.imageBase64 ?? undefined,
     isImageMode: extraction.isImageMode,
     filename,
+    customTypeLabels: customTypeLabels && customTypeLabels.length > 0 ? customTypeLabels : undefined,
   });
 
   return result as ForgeExtractionResult;

@@ -99,7 +99,7 @@ const LABEL_TO_ID: Record<string, string> = {
   "Loan Offer & Mortgage": "loan-offer-mortgage",
 };
 
-function buildSystemPrompt(): string {
+function buildSystemPrompt(customTypeLabels?: string[]): string {
   return `You are an expert document classifier and data extractor for an Australian mortgage broking context.
 Your task is to:
 1. Identify the document type from the provided list
@@ -165,7 +165,10 @@ RESPONSE FORMAT (strict JSON, no markdown, no explanation):
 }
 
 Only include fields (other than signed) that are clearly present in the document. Do not guess or fabricate values.
-If you cannot determine the document type, use "Unknown" with confidence 0.`;
+If you cannot determine the document type, use "Unknown" with confidence 0.${customTypeLabels && customTypeLabels.length > 0 ? `
+
+ADDITIONAL USER-DEFINED DOCUMENT TYPES (also valid classifications, treat with same priority as built-in types):
+${customTypeLabels.map(l => `- ${l}`).join("\n")}` : ""}`;
 }
 
 export const classifyRouter = router({
@@ -180,10 +183,12 @@ export const classifyRouter = router({
         isImageMode: z.boolean(),
         /** Original filename for context */
         filename: z.string(),
+        /** User-defined custom document type labels to include in classification */
+        customTypeLabels: z.array(z.string()).optional(),
       })
     )
     .mutation(async ({ input }) => {
-      const { text, imageBase64, isImageMode, filename } = input;
+      const { text, imageBase64, isImageMode, filename, customTypeLabels } = input;
 
       // Build user message content
       const userContent: Array<{ type: string; text?: string; image_url?: { url: string; detail: string } }> = [];
@@ -223,7 +228,7 @@ export const classifyRouter = router({
 
       const result = await invokeLLM({
         messages: [
-          { role: "system", content: buildSystemPrompt() },
+          { role: "system", content: buildSystemPrompt(customTypeLabels) },
           { role: "user", content: userContent as any },
         ],
         // Note: Do NOT pass response_format — Gemini 2.5 Flash does not support
@@ -263,7 +268,13 @@ export const classifyRouter = router({
       }
 
       const label = parsed.documentType || "Unknown";
-      const typeId = LABEL_TO_ID[label] || "unknown";
+      // Check built-in types first, then resolve custom types by matching the label
+      let typeId = LABEL_TO_ID[label];
+      if (!typeId && customTypeLabels && customTypeLabels.includes(label)) {
+        // Custom type: generate the same ID format used on the client
+        typeId = "custom-" + label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      }
+      typeId = typeId || "unknown";
       const confidence = Math.max(0, Math.min(100, parsed.confidence || 0));
       const fields = parsed.fields || {};
 

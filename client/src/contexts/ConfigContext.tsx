@@ -1,12 +1,23 @@
 /*
  * Doc Renamer — Configuration Context
- * Manages global settings: separator, date format, name format, templates, lender names
+ * Manages global settings: separator, date format, name format, templates, lender names,
+ * and user-defined custom document types.
  * Supports "Save as Default" which persists config to a server-side JSON file.
  */
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { DOCUMENT_TYPES, LENDERS, type Lender } from "@/lib/documentTypes";
 import { trpc } from "@/lib/trpc";
+
+/** A user-defined document type (not in the built-in DOCUMENT_TYPES list) */
+export interface CustomDocumentType {
+  /** Unique ID — generated from the label, e.g. "custom-gift-letter-2" */
+  id: string;
+  /** Human-readable label shown in dropdowns and the rename preview */
+  label: string;
+  /** Filename template, e.g. "Gift Letter {lender} {name} {date}" */
+  template: string;
+}
 
 export interface Config {
   separator: string;
@@ -17,6 +28,7 @@ export interface Config {
   redactTaxFileNumber: boolean;
   templates: Record<string, string>;
   lenderNames: Record<string, string>;
+  customDocumentTypes: CustomDocumentType[];
 }
 
 interface ConfigContextType {
@@ -33,6 +45,10 @@ interface ConfigContextType {
   updateLenderName: (lenderId: string, name: string) => void;
   resetLenderName: (lenderId: string) => void;
   getLenderName: (lenderId: string) => string;
+  // Custom document types
+  addCustomDocumentType: (label: string, template: string) => void;
+  updateCustomDocumentType: (id: string, label: string, template: string) => void;
+  deleteCustomDocumentType: (id: string) => void;
   saveAsDefault: () => Promise<void>;
   isSaving: boolean;
 }
@@ -54,7 +70,26 @@ export const defaultConfig: Config = {
   redactTaxFileNumber: false,
   templates: { ...defaultTemplates },
   lenderNames: { ...defaultLenderNames },
+  customDocumentTypes: [],
 };
+
+/** Generate a stable, URL-safe ID from a label */
+function labelToId(label: string): string {
+  return "custom-" + label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/** Generate a unique ID, appending a numeric suffix if needed */
+function uniqueId(label: string, existing: CustomDocumentType[]): string {
+  const base = labelToId(label);
+  const existingIds = new Set(existing.map(c => c.id));
+  if (!existingIds.has(base)) return base;
+  let n = 2;
+  while (existingIds.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
+}
 
 const ConfigContext = createContext<ConfigContextType | null>(null);
 
@@ -74,8 +109,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       setConfig({
         ...defaultConfig,
         ...savedConfig,
-        templates: { ...defaultTemplates, ...savedConfig.templates },
-        lenderNames: { ...defaultLenderNames, ...savedConfig.lenderNames },
+        templates: { ...defaultTemplates, ...(savedConfig as Config).templates },
+        lenderNames: { ...defaultLenderNames, ...(savedConfig as Config).lenderNames },
+        customDocumentTypes: (savedConfig as Config).customDocumentTypes ?? [],
       });
     }
   }, [savedConfig]);
@@ -85,7 +121,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const saveAsDefault = useCallback(async () => {
     setIsSaving(true);
     try {
-      await saveDefaultMutation.mutateAsync(config);
+      await saveDefaultMutation.mutateAsync(config as never);
     } finally {
       setIsSaving(false);
     }
@@ -145,6 +181,32 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     return config.lenderNames[lenderId] || LENDERS.find(l => l.id === lenderId)?.abbreviation || lenderId;
   }, [config.lenderNames]);
 
+  const addCustomDocumentType = useCallback((label: string, template: string) => {
+    setConfig(c => {
+      const id = uniqueId(label, c.customDocumentTypes);
+      return {
+        ...c,
+        customDocumentTypes: [...c.customDocumentTypes, { id, label, template }],
+      };
+    });
+  }, []);
+
+  const updateCustomDocumentType = useCallback((id: string, label: string, template: string) => {
+    setConfig(c => ({
+      ...c,
+      customDocumentTypes: c.customDocumentTypes.map(ct =>
+        ct.id === id ? { ...ct, label, template } : ct
+      ),
+    }));
+  }, []);
+
+  const deleteCustomDocumentType = useCallback((id: string) => {
+    setConfig(c => ({
+      ...c,
+      customDocumentTypes: c.customDocumentTypes.filter(ct => ct.id !== id),
+    }));
+  }, []);
+
   return (
     <ConfigContext.Provider value={{
       config,
@@ -160,6 +222,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       updateLenderName,
       resetLenderName,
       getLenderName,
+      addCustomDocumentType,
+      updateCustomDocumentType,
+      deleteCustomDocumentType,
       saveAsDefault,
       isSaving,
     }}>

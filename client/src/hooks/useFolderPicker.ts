@@ -114,11 +114,16 @@ export async function pickFiles(): Promise<FolderFile[] | null> {
       accept: {
         "application/pdf": [".pdf"],
         "image/*": [".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp"],
+        // Excel formats
         "application/vnd.ms-excel": [".xls", ".xlt"],
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
         "application/vnd.ms-excel.sheet.macroEnabled.12": [".xlsm"],
         "application/vnd.openxmlformats-officedocument.spreadsheetml.template": [".xltx"],
         "application/vnd.ms-excel.template.macroEnabled.12": [".xltm"],
+        // Word formats
+        "application/msword": [".doc", ".dot"],
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.template": [".dotx"],
       },
     },
   ];

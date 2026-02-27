@@ -14,8 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RotateCcw, ChevronDown, ChevronUp, Search, X, Save, CheckCircle2, Tag, ChevronRight } from "lucide-react";
-import { useConfig } from "@/contexts/ConfigContext";
+import { RotateCcw, ChevronDown, ChevronUp, Search, X, Save, CheckCircle2, Tag, ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
+import { useConfig, type CustomDocumentType } from "@/contexts/ConfigContext";
 import {
   DOCUMENT_TYPES,
   LENDERS,
@@ -36,7 +36,7 @@ interface ConfigDialogProps {
 }
 
 export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
-  const { config, updateSeparator, updateDateOrder, updateDateSeparator, updateNameFormat, updateConvertImages, updateRedactTFN, resetAllTemplates, saveAsDefault, isSaving } = useConfig();
+  const { config, updateSeparator, updateDateOrder, updateDateSeparator, updateNameFormat, updateConvertImages, updateRedactTFN, resetAllTemplates, saveAsDefault, isSaving, addCustomDocumentType, updateCustomDocumentType, deleteCustomDocumentType } = useConfig();
   const [savedFeedback, setSavedFeedback] = useState(false);
 
   async function handleSaveDefault() {
@@ -58,8 +58,9 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
         </div>
 
         <Tabs defaultValue="templates" className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <TabsList className="mx-6 mt-4 mb-0 flex-shrink-0 grid grid-cols-2 h-9">
+          <TabsList className="mx-6 mt-4 mb-0 flex-shrink-0 grid grid-cols-3 h-9">
             <TabsTrigger value="templates">Document Templates</TabsTrigger>
+            <TabsTrigger value="custom">Custom Types</TabsTrigger>
             <TabsTrigger value="lenders">Lender Names</TabsTrigger>
           </TabsList>
 
@@ -161,6 +162,15 @@ export function ConfigDialog({ open, onClose }: ConfigDialogProps) {
                 </div>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="custom" className="flex-1 min-h-0 flex flex-col mt-0 overflow-hidden">
+            <CustomTypesTab
+              customTypes={config.customDocumentTypes}
+              onAdd={addCustomDocumentType}
+              onUpdate={updateCustomDocumentType}
+              onDelete={deleteCustomDocumentType}
+            />
           </TabsContent>
 
           <TabsContent value="lenders" className="flex-1 min-h-0 flex flex-col mt-0 overflow-hidden">
@@ -394,6 +404,204 @@ function DocumentTemplateRow({ docTypeId }: { docTypeId: string }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Custom Document Types Tab ───────────────────────────────────────────────
+
+interface CustomTypesTabProps {
+  customTypes: CustomDocumentType[];
+  onAdd: (label: string, template: string) => void;
+  onUpdate: (id: string, label: string, template: string) => void;
+  onDelete: (id: string) => void;
+}
+
+function CustomTypesTab({ customTypes, onAdd, onUpdate, onDelete }: CustomTypesTabProps) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formLabel, setFormLabel] = useState("");
+  const [formTemplate, setFormTemplate] = useState("");
+  const [labelError, setLabelError] = useState("");
+  const [templateError, setTemplateError] = useState("");
+
+  function validateForm(label: string, template: string, currentId?: string): boolean {
+    let valid = true;
+    if (!label.trim()) {
+      setLabelError("Name is required");
+      valid = false;
+    } else if (
+      customTypes.some(ct => ct.label.toLowerCase() === label.trim().toLowerCase() && ct.id !== currentId)
+    ) {
+      setLabelError("A custom type with this name already exists");
+      valid = false;
+    } else {
+      setLabelError("");
+    }
+    if (!template.trim()) {
+      setTemplateError("Template is required");
+      valid = false;
+    } else {
+      setTemplateError("");
+    }
+    return valid;
+  }
+
+  function handleAdd() {
+    if (!validateForm(formLabel, formTemplate)) return;
+    onAdd(formLabel.trim(), formTemplate.trim());
+    setFormLabel("");
+    setFormTemplate("");
+    setIsAdding(false);
+  }
+
+  function handleEditStart(ct: CustomDocumentType) {
+    setEditingId(ct.id);
+    setFormLabel(ct.label);
+    setFormTemplate(ct.template);
+    setLabelError("");
+    setTemplateError("");
+    setIsAdding(false);
+  }
+
+  function handleEditSave(id: string) {
+    if (!validateForm(formLabel, formTemplate, id)) return;
+    onUpdate(id, formLabel.trim(), formTemplate.trim());
+    setEditingId(null);
+  }
+
+  function handleCancel() {
+    setIsAdding(false);
+    setEditingId(null);
+    setFormLabel("");
+    setFormTemplate("");
+    setLabelError("");
+    setTemplateError("");
+  }
+
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="px-6 py-4 space-y-4">
+        {/* Info box */}
+        <div className="bg-muted/50 rounded-md p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">Custom Document Types</p>
+          <p>Create your own document types with custom naming templates. Use the same tags as built-in types — e.g. <code className="bg-background px-1 rounded">{'{name}'}</code>, <code className="bg-background px-1 rounded">{'{lender}'}</code>, <code className="bg-background px-1 rounded">{'{date}'}</code>, <code className="bg-background px-1 rounded">{'{signed}'}</code>.</p>
+          <p>Custom types appear in the document type dropdown in the rename preview, and the AI will classify documents as your custom type when it detects a match.</p>
+        </div>
+
+        {/* Existing custom types */}
+        {customTypes.length === 0 && !isAdding && (
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            No custom document types yet. Click <strong>Add Custom Type</strong> to create one.
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {customTypes.map(ct => (
+            <div key={ct.id} className="border border-border rounded-md">
+              {editingId === ct.id ? (
+                // Edit form
+                <div className="p-3 space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Type Name</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={formLabel}
+                      onChange={e => setFormLabel(e.target.value)}
+                      placeholder="e.g. Fact Find"
+                    />
+                    {labelError && <p className="text-xs text-destructive">{labelError}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Filename Template</Label>
+                    <Input
+                      className="h-8 text-xs font-mono"
+                      value={formTemplate}
+                      onChange={e => setFormTemplate(e.target.value)}
+                      placeholder="e.g. Fact Find {lender} {name} {date}"
+                    />
+                    {templateError && <p className="text-xs text-destructive">{templateError}</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="h-7 text-xs" onClick={() => handleEditSave(ct.id)}>Save</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleCancel}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                // Read-only row
+                <div className="flex items-center justify-between px-3 py-2.5 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{ct.label}</p>
+                    <p className="text-xs text-muted-foreground font-mono truncate">{ct.template}</p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => handleEditStart(ct)}
+                      title="Edit"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => onDelete(ct.id)}
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Add form */}
+        {isAdding ? (
+          <div className="border border-border rounded-md p-3 space-y-3">
+            <p className="text-xs font-medium">New Custom Type</p>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Type Name</Label>
+              <Input
+                className="h-8 text-xs"
+                value={formLabel}
+                onChange={e => setFormLabel(e.target.value)}
+                placeholder="e.g. Fact Find"
+                autoFocus
+              />
+              {labelError && <p className="text-xs text-destructive">{labelError}</p>}
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Filename Template</Label>
+              <Input
+                className="h-8 text-xs font-mono"
+                value={formTemplate}
+                onChange={e => setFormTemplate(e.target.value)}
+                placeholder="e.g. Fact Find {lender} {name} {date}"
+              />
+              {templateError && <p className="text-xs text-destructive">{templateError}</p>}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" className="h-7 text-xs" onClick={handleAdd}>Add</Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleCancel}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs gap-1.5"
+            onClick={() => { setIsAdding(true); setEditingId(null); setFormLabel(""); setFormTemplate(""); setLabelError(""); setTemplateError(""); }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Custom Type
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

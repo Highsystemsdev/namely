@@ -182,7 +182,8 @@ export default function Home() {
           config.nameFormat,
           config.dateOrder,
           config.dateSeparator,
-          config.lenderNames
+          config.lenderNames,
+          config.customDocumentTypes
         );
         setDocuments(prev => prev.map(d => d.id === placeholder.id ? result : d));
       } catch (err) {
@@ -362,7 +363,8 @@ export default function Home() {
             config.nameFormat,
             config.dateOrder,
             config.dateSeparator,
-            config.lenderNames
+            config.lenderNames,
+            config.customDocumentTypes
           );
           items.push({ folderFile, doc, approved: true });
         } catch (err) {
@@ -425,8 +427,14 @@ export default function Home() {
     setFolderItems(prev => prev.map(item => {
       if (item.doc.id !== id) return item;
 
-      // Look up the new document type config
-      const newDocType = DOCUMENT_TYPES.find(d => d.id === newTypeId);
+      // Look up the new document type config — check built-in types first, then custom types
+      const builtInDocType = DOCUMENT_TYPES.find(d => d.id === newTypeId);
+      const customDocType = config.customDocumentTypes.find(ct => ct.id === newTypeId);
+      const newDocType = builtInDocType
+        ? { id: builtInDocType.id, label: builtInDocType.label, defaultTemplate: builtInDocType.defaultTemplate, variables: builtInDocType.variables }
+        : customDocType
+          ? { id: customDocType.id, label: customDocType.label, defaultTemplate: customDocType.template, variables: [] }
+          : null;
       if (!newDocType) return item;
 
       // Preserve the original file extension
@@ -515,7 +523,8 @@ export default function Home() {
             config.nameFormat,
             config.dateOrder,
             config.dateSeparator,
-            config.lenderNames
+            config.lenderNames,
+            config.customDocumentTypes
           );
           items.push({ folderFile, doc, approved: true });
         } catch (err) {
