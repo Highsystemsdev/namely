@@ -164,3 +164,6 @@
 - [x] "Add new template" row always visible at bottom (expand-to-fill, collapses after save)
 - [x] Edit name, template, and delete actions available inline when a custom type row is expanded
 - [x] 117 tests passing
+
+## Bug Fixes (Round 24 - Custom Template Persistence)
+- [x] Fix: custom document types not persisted after Save as Default — ConfigSchema on server was missing customDocumentTypes field, causing Zod to strip it before writing to disk

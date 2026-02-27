@@ -13,6 +13,12 @@ import { publicProcedure, router } from "./_core/trpc";
 const DATA_DIR = path.resolve(process.cwd(), "data");
 const CONFIG_FILE = path.join(DATA_DIR, "config.json");
 
+const CustomDocumentTypeSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  template: z.string(),
+});
+
 const ConfigSchema = z.object({
   separator: z.string(),
   dateOrder: z.string(),
@@ -22,6 +28,7 @@ const ConfigSchema = z.object({
   redactTaxFileNumber: z.boolean(),
   templates: z.record(z.string(), z.string()),
   lenderNames: z.record(z.string(), z.string()),
+  customDocumentTypes: z.array(CustomDocumentTypeSchema).optional().default([]),
 });
 
 function ensureDataDir() {
