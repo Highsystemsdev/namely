@@ -139,3 +139,11 @@
 - [x] Strengthen prompt: always include signed field in JSON response, not just when detected
 - [x] Ensure signed detection works for both image mode (scanned) and text mode (digital PDF)
 - [x] Add "Loan Offer & Mortgage" document type with template "Loan Offer & Mortgage {lender} {name} {date} {signed}"
+
+## New Features (Round 21 - Word Document Support)
+- [x] Install mammoth for .docx/.dotx text extraction (browser-compatible)
+- [x] Implement wordExtractor.ts for .doc, .docx, .dot, .dotx files
+- [x] Wire Word extraction into documentExtractor.ts
+- [x] Update accepted file types in Home.tsx upload zone and folder picker
+- [x] Update accepted file types in the info banner and file size display
+- [x] Write tests for Word extraction logic (14 tests)

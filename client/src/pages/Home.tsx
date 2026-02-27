@@ -52,10 +52,15 @@ const ACCEPTED_TYPES = [
   "application/vnd.ms-excel.template",                                           // .xlt
   "application/vnd.openxmlformats-officedocument.spreadsheetml.template",        // .xltx
   "application/vnd.ms-excel.template.macroEnabled.12",                           // .xltm
+  // Word formats
+  "application/msword",                                                          // .doc / .dot
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",     // .docx
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.template",     // .dotx
 ];
 const ACCEPTED_EXTENSIONS = [
   ".pdf", ".png", ".jpg", ".jpeg", ".heic", ".heif", ".webp", ".zip",
   ".xls", ".xlsx", ".xlsm", ".xlt", ".xltx", ".xltm",
+  ".doc", ".docx", ".dot", ".dotx",
 ];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_ZIP_SIZE = 25 * 1024 * 1024; // 25MB
@@ -70,6 +75,11 @@ function getFileIcon(fileType: string, fileName?: string) {
     lowerName.endsWith(".xltx") || lowerName.endsWith(".xltm") ||
     fileType.includes("spreadsheet") || fileType.includes("excel")
   ) return "📊";
+  if (
+    lowerName.endsWith(".doc") || lowerName.endsWith(".docx") ||
+    lowerName.endsWith(".dot") || lowerName.endsWith(".dotx") ||
+    fileType.includes("msword") || fileType.includes("wordprocessingml")
+  ) return "📝";
   return "📄";
 }
 
@@ -696,7 +706,7 @@ export default function Home() {
                 <span className="text-muted-foreground">to rename them within their existing folder</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Supports PDF, PNG, JPG, HEIC, HEIF, WEBP, XLS, XLSX, XLSM, XLT, XLTX, XLTM (Max 50MB per file)
+                Supports PDF, PNG, JPG, HEIC, HEIF, WEBP, XLS, XLSX, XLSM, XLT, XLTX, XLTM, DOC, DOCX, DOT, DOTX (Max 50MB per file)
               </p>
               {(!isFolderPickerSupported || !isFilePickerSupported) && (
                 <p className="text-xs text-amber-600 mt-1">

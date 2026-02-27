@@ -6,10 +6,12 @@
  *  1. Digital PDF  → extract raw text via PDF.js text layer (cheap, fast)
  *  2. Scanned PDF  → if text layer is empty/tiny, render page 1 to canvas → base64 JPEG
  *  3. Image files  → read directly as base64 via FileReader
+ *  4. Word files   → extract plain text via mammoth (.docx/.dotx/.doc/.dot)
  */
 
 import * as pdfjsLib from "pdfjs-dist";
 import { extractExcelText, isExcelFile } from "./excelExtractor";
+import { extractWordText, isWordFile } from "./wordExtractor";
 
 // Point the worker at the bundled worker file via Vite's ?url import trick
 // We use a CDN URL for the worker to avoid bundling issues with the large worker file
@@ -112,6 +114,12 @@ export async function extractDocumentContent(file: File): Promise<ExtractionResu
   // --- Excel files (.xls, .xlsx, .xlsm, .xlt, .xltx, .xltm) ---
   if (isExcelFile(file)) {
     const { text } = await extractExcelText(file);
+    return { text, imageBase64: null, isImageMode: false };
+  }
+
+  // --- Word files (.doc, .docx, .dot, .dotx) ---
+  if (isWordFile(file)) {
+    const { text } = await extractWordText(file);
     return { text, imageBase64: null, isImageMode: false };
   }
 
