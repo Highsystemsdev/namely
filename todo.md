@@ -156,3 +156,11 @@
 - [x] Custom template labels are included in the AI classification prompt (server-side)
 - [x] handleFolderTypeChange resolves custom types for template re-application
 - [x] 14 new vitest tests for custom document type logic (117 total passing)
+
+## New Features (Round 23 - Inline Custom Templates)
+- [x] Remove separate Custom Types tab from ConfigDialog (now 2-tab layout: Templates + Lender Names)
+- [x] Merge custom types inline into Templates tab, alphabetically sorted with built-in types
+- [x] Custom type rows use same expand/collapse card style as built-in rows (dashed border + "custom" badge)
+- [x] "Add new template" row always visible at bottom (expand-to-fill, collapses after save)
+- [x] Edit name, template, and delete actions available inline when a custom type row is expanded
+- [x] 117 tests passing
