@@ -574,7 +574,7 @@ export default function Home() {
               className="flex-shrink-0"
             />
             <div>
-              <p className="text-xs text-muted-foreground">Reads it. Knows it. Renames it.</p>
+              <p className="text-xs text-muted-foreground">Reads it. Renames it.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
