@@ -1,5 +1,5 @@
 /**
- * Doc Renamer — Word Document Extractor
+ * Namely — Word Document Extractor
  * Extracts plain text from .docx and .dotx files using mammoth (browser build).
  * .doc and .dot (legacy binary format) are also handled: mammoth can read
  * many .doc files, but falls back gracefully if the format is unsupported.

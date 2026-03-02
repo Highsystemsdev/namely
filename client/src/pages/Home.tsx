@@ -1,5 +1,5 @@
 /*
- * Doc Renamer — Main Page
+ * Namely — Main Page
  * Design: Swiss Grid Modernism — structured utility interface
  * Layout: Header + upload zone + document list with inline actions
  */
@@ -568,13 +568,12 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663351580376/dHinwXYUkQDhxVeQ.png"
-              alt="Doc Renamer logo"
-              className="w-8 h-8 rounded-lg flex-shrink-0"
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663351580376/YNocuxFTMCEcf4jDDBMSiH/namely-logo-KJMcpRxZfNS6Yo3kctCvsY.webp"
+              alt="Namely"
+              className="h-8 w-auto flex-shrink-0"
             />
             <div>
-              <h1 className="text-base font-semibold leading-none">Doc Renamer</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">AI-powered document detection and renaming tool</p>
+              <p className="text-xs text-muted-foreground">AI-powered document detection and renaming tool</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -597,10 +596,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Doc Renamer section */}
+        {/* Namely section */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Doc Renamer</h2>
+            <h2 className="text-sm font-semibold">Namely</h2>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -634,13 +633,15 @@ export default function Home() {
           </div>
 
           {/* Upload zone — two visually separated sections */}
-          <div className="border border-dashed border-border rounded-lg overflow-hidden">
+          <div className="rounded-xl overflow-hidden border border-border shadow-sm">
 
             {/* Section 1: Upload / drag-and-drop */}
             <div
               className={cn(
-                "cursor-pointer transition-colors px-6 py-7 flex flex-col items-center text-center",
-                isDragOver ? "bg-primary/5" : "bg-background hover:bg-muted/40"
+                "cursor-pointer transition-all px-6 py-8 flex flex-col items-center text-center",
+                isDragOver
+                  ? "bg-teal-50 border-b-2 border-b-teal-400"
+                  : "bg-white hover:bg-teal-50/40 border-b border-b-border"
               )}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -648,14 +649,14 @@ export default function Home() {
               onClick={() => fileInputRef.current?.click()}
             >
               <div className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors",
-                isDragOver ? "bg-primary/10" : "bg-muted"
+                "w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-colors",
+                isDragOver ? "bg-teal-100" : "bg-teal-50 border border-teal-200"
               )}>
-                <Upload className={cn("h-5 w-5 transition-colors", isDragOver ? "text-primary" : "text-muted-foreground")} />
+                <Upload className={cn("h-5 w-5 transition-colors", isDragOver ? "text-teal-600" : "text-teal-500")} />
               </div>
               <div className="flex items-center gap-2 text-sm font-medium mb-1">
                 <button
-                  className="text-primary hover:underline font-semibold"
+                  className="text-teal-600 hover:text-teal-700 hover:underline font-semibold"
                   onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
                 >
                   + Upload files
@@ -668,23 +669,23 @@ export default function Home() {
             </div>
 
             {/* Divider */}
-            <div className="flex items-center gap-3 px-6 py-2 bg-muted/30 border-t border-b border-dashed border-border">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground font-medium tracking-wide uppercase">or rename in place</span>
-              <div className="flex-1 h-px bg-border" />
+            <div className="flex items-center gap-4 px-6 py-2.5 bg-slate-100 border-y border-slate-200">
+              <div className="flex-1 h-px bg-slate-300" />
+              <span className="text-[11px] text-slate-500 font-semibold tracking-widest uppercase">or rename in place</span>
+              <div className="flex-1 h-px bg-slate-300" />
             </div>
 
             {/* Section 2: Pick files / Pick folder */}
             <div
-              className="px-6 py-7 flex flex-col items-center text-center bg-background"
+              className="px-6 py-8 flex flex-col items-center text-center bg-slate-50"
               onClick={e => e.stopPropagation()}
             >
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 bg-muted">
-                <FolderOpen className="h-5 w-5 text-muted-foreground" />
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3 bg-slate-100 border border-slate-200">
+                <FolderOpen className="h-5 w-5 text-slate-500" />
               </div>
               <div className="flex items-center gap-2 text-sm font-medium mb-1 flex-wrap justify-center">
                 <button
-                  className="text-primary hover:underline font-semibold flex items-center gap-1"
+                  className="text-slate-700 hover:text-slate-900 hover:underline font-semibold flex items-center gap-1"
                   onClick={() => handlePickFiles()}
                   disabled={isFolderLoading}
                 >
@@ -699,7 +700,7 @@ export default function Home() {
                   <>
                     <span className="text-muted-foreground">or</span>
                     <button
-                      className="text-primary hover:underline font-semibold flex items-center gap-1"
+                      className="text-slate-700 hover:text-slate-900 hover:underline font-semibold flex items-center gap-1"
                       onClick={() => handleOpenFolder()}
                       disabled={isFolderLoading}
                     >

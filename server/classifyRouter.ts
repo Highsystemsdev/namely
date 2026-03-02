@@ -1,5 +1,5 @@
 /**
- * Doc Renamer — Document Classification Router
+ * Namely — Document Classification Router
  * Receives extracted text or a base64 image from the frontend,
  * calls the Forge LLM (server-side, secure), and returns structured
  * document classification + field extraction results.

@@ -1,5 +1,5 @@
 /**
- * Doc Renamer — Document Extractor
+ * Namely — Document Extractor
  * Extracts text or renders a base64 image from the first page of a document.
  *
  * Strategy:

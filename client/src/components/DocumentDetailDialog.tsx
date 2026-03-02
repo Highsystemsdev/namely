@@ -1,5 +1,5 @@
 /*
- * Doc Renamer — Document Detail Dialog
+ * Namely — Document Detail Dialog
  * Shows proposed filename, extracted data breakdown, confidence score, and manual edit
  */
 

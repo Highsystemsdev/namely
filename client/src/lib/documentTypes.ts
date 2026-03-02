@@ -1,5 +1,5 @@
 /*
- * Doc Renamer — Document Types & Templates
+ * Namely — Document Types & Templates
  * All ~62 supported document types with their default naming templates and available variables
  */
 

@@ -1,5 +1,5 @@
 /**
- * Doc Renamer — Configuration Persistence Router
+ * Namely — Configuration Persistence Router
  * Saves and loads the user's configuration to/from a JSON file on the server.
  * The file is stored at data/config.json relative to the project root.
  */

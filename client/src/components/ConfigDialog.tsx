@@ -1,5 +1,5 @@
 /*
- * Doc Renamer — Configuration Dialog
+ * Namely — Configuration Dialog
  * Design: Swiss Grid Modernism — clean modal with tabs for Document Templates and Lender Names
  */
 

@@ -1,5 +1,5 @@
 /**
- * Doc Renamer — AI Document Processor
+ * Namely — AI Document Processor
  * Real AI-powered document classification and data extraction via Forge API (GPT-4o).
  * Uses PDF.js for text extraction and Vision API for scanned/image documents.
  */

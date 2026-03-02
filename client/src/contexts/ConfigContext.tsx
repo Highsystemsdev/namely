@@ -1,5 +1,5 @@
 /*
- * Doc Renamer — Configuration Context
+ * Namely — Configuration Context
  * Manages global settings: separator, date format, name format, templates, lender names,
  * and user-defined custom document types.
  * Supports "Save as Default" which persists config to a server-side JSON file.

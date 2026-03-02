@@ -1,5 +1,5 @@
 /**
- * Doc Renamer — Document Extractor (via Backend tRPC)
+ * Namely — Document Extractor (via Backend tRPC)
  * Calls the server-side classify procedure which uses the secure BUILT_IN_FORGE_API_KEY.
  * Uses the tRPC vanilla client to ensure correct request format.
  */

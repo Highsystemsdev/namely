@@ -167,3 +167,12 @@
 
 ## Bug Fixes (Round 24 - Custom Template Persistence)
 - [x] Fix: custom document types not persisted after Save as Default — ConfigSchema on server was missing customDocumentTypes field, causing Zod to strip it before writing to disk
+
+## New Features (Round 25 - Rebrand to Namely)
+- [x] Update app title to "Namely" in all metadata, headers, and page titles
+- [x] Generate Namely word logo (teal wordmark with folded-page N detail)
+- [x] Deploy logo to CDN and update header img src to CDN URL
+- [x] Upload section: white bg, teal icon, teal accent colours
+- [x] Separator: solid slate-100 band with bold tracking-widest uppercase text
+- [x] Pick Files section: slate-50 bg, slate-100 icon, slate-700 button text for clear distinction
+- [x] 117 tests passing
