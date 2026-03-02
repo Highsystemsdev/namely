@@ -176,3 +176,9 @@
 - [x] Separator: solid slate-100 band with bold tracking-widest uppercase text
 - [x] Pick Files section: slate-50 bg, slate-100 icon, slate-700 button text for clear distinction
 - [x] 117 tests passing
+
+## New Features (Round 26 - Branding Polish)
+- [x] Crop N from Namely logo using auto-detection bounding box, white N on teal rounded-rect background
+- [x] Upload favicon (32px PNG, 192px PNG, 512px PNG, ICO) to CDN and wire into index.html
+- [x] Increase header logo to clamp(100px, 15vw, 200px) with adjusted header padding
+- [x] Remove redundant "Namely" h2 heading — action bar now right-aligned only

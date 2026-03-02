@@ -565,12 +565,13 @@ export default function Home() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-white sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
               src="https://d2xsxph8kpxj0f.cloudfront.net/310519663351580376/YNocuxFTMCEcf4jDDBMSiH/namely-logo-KJMcpRxZfNS6Yo3kctCvsY.webp"
               alt="Namely"
-              className="h-8 w-auto flex-shrink-0"
+              style={{ height: "clamp(100px, 15vw, 200px)", width: "auto" }}
+              className="flex-shrink-0"
             />
             <div>
               <p className="text-xs text-muted-foreground">AI-powered document detection and renaming tool</p>
@@ -596,10 +597,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Namely section */}
+        {/* Action bar */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Namely</h2>
+          <div className="flex items-center justify-end">
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
